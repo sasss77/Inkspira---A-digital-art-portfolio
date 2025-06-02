@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "658536554579",
+    "firebase_url": "https://androidappy-64a29-default-rtdb.firebaseio.com",
+    "project_id": "androidappy-64a29",
+    "storage_bucket": "androidappy-64a29.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:658536554579:android:d5bbbaa0b175ac4269a6a6",
+        "android_client_info": {
+          "package_name": "com.example.inkspira_adigitalartportfolio"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbceIkyblP2QT9QDBZ-lBj2R19iTM5XkQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,4 @@
-package com.example.inkspira_adigitalartportfolio
+package com.example.inkspira_adigitalartportfolio.view
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
