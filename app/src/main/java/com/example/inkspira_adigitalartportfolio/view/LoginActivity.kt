@@ -3,6 +3,7 @@ package com.example.inkspira_adigitalartportfolio.view
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -64,7 +65,6 @@ class LoginActivity : ComponentActivity() {
 }
 
 
-
 @Composable
 fun loginBody() {
 
@@ -81,171 +81,170 @@ fun loginBody() {
     val activity = context as Activity
 
 
-    Scaffold() {
-        padding -> Column(
-        modifier = Modifier.padding(padding).
-        padding(vertical = 50.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-        Image(
-            painter = painterResource(R.drawable.loginimg),
-            contentDescription = null,
-
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-        OutlinedTextField(
-            value = email,
-            onValueChange = {
-                email = it
-            },
+    Scaffold { padding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 15.dp),
-            placeholder = {
-                Text(text = "Enter email")
-            },
-            //            minLines = 4,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.White.copy(alpha = 0.2f),
-                focusedIndicatorColor = Color.Green,
-                unfocusedContainerColor = Color.White.copy(alpha = 0.2f),
-                unfocusedIndicatorColor = Color.Black
-            ),
-            shape = RoundedCornerShape(12.dp),
-            prefix = {
-                Icon(Icons.Default.Email, contentDescription = null)
-            },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email
-            )
-        )
-
-        //password
-        Spacer(modifier = Modifier.height(20.dp))
-        OutlinedTextField(
-            value = password,
-            onValueChange = {
-                password = it
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 15.dp),
-            placeholder = {
-                Text(text = "Enter password")
-            },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.White.copy(alpha = 0.2f),
-                focusedIndicatorColor = Color.Green,
-                unfocusedContainerColor = Color.White.copy(alpha = 0.2f),
-                unfocusedIndicatorColor = Color.Black
-            ),
-            shape = RoundedCornerShape(12.dp),
-            prefix = {
-                Icon(Icons.Default.Lock, contentDescription = null)
-            },
-            suffix = {
-                Icon(
-                    painterResource(
-                        if (visibility) R.drawable.baseline_visibility_24 else
-                            R.drawable.baseline_visibility_off_24
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
-
-                        visibility = !visibility
-
-                    })
-            },
-
-            visualTransformation = if (visibility) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password
-            )
-        )
-
-
-        //Forget password
-        Row(
-            modifier = Modifier.padding(vertical = 15.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-
+                .padding(padding)
+                .padding(vertical = 50.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "forgot password? Click here",
-                color = Color.Blue,
-                modifier = Modifier.padding(horizontal = 15.dp)
+            Image(
+                painter = painterResource(R.drawable.loginimg),
+                contentDescription = null,
+
+                )
+
+            Spacer(modifier = Modifier.height(20.dp))
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp),
+                placeholder = {
+                    Text(text = "Enter email")
+                },
+                //            minLines = 4,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White.copy(alpha = 0.2f),
+                    focusedIndicatorColor = Color.Green,
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.2f),
+                    unfocusedIndicatorColor = Color.Black
+                ),
+                shape = RoundedCornerShape(12.dp),
+                prefix = {
+                    Icon(Icons.Default.Email, contentDescription = null)
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email
+                )
+            )
+
+            //password
+            Spacer(modifier = Modifier.height(20.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp),
+                placeholder = {
+                    Text(text = "Enter password")
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White.copy(alpha = 0.2f),
+                    focusedIndicatorColor = Color.Green,
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.2f),
+                    unfocusedIndicatorColor = Color.Black
+                ),
+                shape = RoundedCornerShape(12.dp),
+                prefix = {
+                    Icon(Icons.Default.Lock, contentDescription = null)
+                },
+                suffix = {
+                    Icon(
+                        painterResource(
+                            if (visibility) R.drawable.baseline_visibility_24 else
+                                R.drawable.baseline_visibility_off_24
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+
+                            visibility = !visibility
+
+                        })
+                },
+
+                visualTransformation = if (visibility) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                )
+            )
+
+
+            //Forget password
+            Row(
+                modifier = Modifier
+                    .padding(vertical = 15.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+
+            ) {
+                Text(
+                    text = "forgot password? Click here",
+                    color = Color.Blue,
+                    modifier = Modifier.padding(horizontal = 15.dp)
 
                 )
 
 
-
-        }
-
+            }
 
 
+            //Submit Button
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = {
 
-        //Submit Button
-        Spacer(modifier = Modifier.height(20.dp))
-        Button(
-            onClick = {
+                    userViewModel.login(email, password) {
+                                                         success, message ->
 
-                userViewModel.login(email, password) {
-                    success, message -> {
-                        if(success) {
-                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            if (success) {
+
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             val intent = Intent(context, NavigationActivity:: class.java)
                             context.startActivity(intent)
                             activity.finish()
-                        }
+                            } else {
+//                                Log.d("checkkkk", message)
 
-                        else {
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
 
-                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                        }
-                }
-                }
-
+                    }
 
 
+                },
+                shape = RoundedCornerShape(15.dp),
+                modifier = Modifier
+                    .height(50.dp)
+                    .width(150.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Blue,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(text = "Sign In")
+            }
 
 
-
-                    },
-            shape = RoundedCornerShape(15.dp),
-            modifier = Modifier.height(50.dp).width(150.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Blue,
-                contentColor = Color.White
-            )
-        ) {
-            Text(text = "Sign In")
-        }
-
-
-        // link to Signup
-        Spacer(modifier = Modifier.height(20.dp))
-        Row {
-            Text(
-                text = "New User? Register Now ",
-                color = Color.Black,
-                textDecoration = TextDecoration.Underline,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
+            // link to Signup
+            Spacer(modifier = Modifier.height(20.dp))
+            Row {
+                Text(
+                    text = "New User? Register Now ",
+                    color = Color.Black,
+                    textDecoration = TextDecoration.Underline,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
 //                modifier = Modifier.clickable {
 //                    val intent = Intent(context, RegistrationActivity:: class.java)
 //                    context.startActivity(intent)
 //                    //to destroy activity
 ////                        activity.finish()
 //                }
-            )
+                )
+            }
+
+
         }
-
-
-
-    }
     }
 }
 

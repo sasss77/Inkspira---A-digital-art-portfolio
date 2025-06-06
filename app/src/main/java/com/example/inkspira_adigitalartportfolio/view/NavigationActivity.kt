@@ -74,7 +74,9 @@ fun navigationBody() {
                     )
                 }
             }
-        },
+        }
+
+        ,
 
         topBar = {
             TopAppBar(
