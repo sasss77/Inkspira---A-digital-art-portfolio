@@ -1,7 +1,9 @@
 package com.example.inkspira_adigitalartportfolio.view
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -47,6 +49,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.inkspira_adigitalartportfolio.R
+import com.example.inkspira_adigitalartportfolio.model.UserModel
+import com.example.inkspira_adigitalartportfolio.repository.UserRepositoryImpl
+import com.example.inkspira_adigitalartportfolio.viewmodel.UserViewModel
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,11 +67,18 @@ class LoginActivity : ComponentActivity() {
 
 @Composable
 fun loginBody() {
+
+    val repo = remember { UserRepositoryImpl() }
+    val userViewModel = remember { UserViewModel(repo) }
+
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    val activity = context as Activity
 
 
     Scaffold() {
@@ -165,7 +177,10 @@ fun loginBody() {
             Text(text = "forgot password? Click here",
                 color = Color.Blue,
                 modifier = Modifier.padding(horizontal = 15.dp)
+
                 )
+
+
 
         }
 
@@ -177,8 +192,26 @@ fun loginBody() {
         Button(
             onClick = {
 
-                val intent = Intent(context, NavigationActivity:: class.java)
-                context.startActivity(intent)
+                userViewModel.login(email, password) {
+                    success, message -> {
+                        if(success) {
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            val intent = Intent(context, NavigationActivity:: class.java)
+                            context.startActivity(intent)
+                            activity.finish()
+                        }
+
+                        else {
+
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                }
+                }
+
+
+
+
+
 
                     },
             shape = RoundedCornerShape(15.dp),
