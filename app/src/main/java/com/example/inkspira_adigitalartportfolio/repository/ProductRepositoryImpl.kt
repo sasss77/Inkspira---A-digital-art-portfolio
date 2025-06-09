@@ -1,7 +1,11 @@
 package com.example.inkspira_adigitalartportfolio.repository
 
+import androidx.compose.runtime.mutableStateOf
 import com.example.inkspira_adigitalartportfolio.model.ProductModel
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 class ProductRepositoryImpl : ProductRepository {
 
@@ -54,10 +58,48 @@ class ProductRepositoryImpl : ProductRepository {
         productID: String,
         callback: (ProductModel?, Boolean, String) -> Unit
     ) {
+            ref.child(productID).addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (snapshot.exists()) {
+                        val product = snapshot.getValue(ProductModel::class.java)
+                        if(product != null) {
+                            callback(product, true, "product fetched")
+                        }
+                        else {
+                            callback(null, false, "product not found")
+                        }
+                    }
 
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    callback(null, false, error.message)
+                }
+
+            })
     }
 
     override fun getAllProduct(callback: (List<ProductModel?>, Boolean, String) -> Unit) {
-        TODO("Not yet implemented")
+         ref.addValueEventListener(object : ValueEventListener {
+             override fun onDataChange(snapshot: DataSnapshot) {
+               if(snapshot.exists()) {
+                   var allProducts = mutableListOf<ProductModel>()
+                   for(eachProduct in snapshot.children) {
+                       var products = eachProduct.getValue(ProductModel::class.java)
+                       if(products != null) {
+                           allProducts.add(products)
+                       }
+                       else {
+                           callback(emptyList(), false, "product not found")
+                       }
+                   }
+               }
+             }
+
+             override fun onCancelled(error: DatabaseError) {
+                 callback(emptyList(), false, error.message)
+             }
+
+         })
     }
 }
