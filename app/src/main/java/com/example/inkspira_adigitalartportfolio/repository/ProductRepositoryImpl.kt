@@ -89,10 +89,9 @@ class ProductRepositoryImpl : ProductRepository {
                        if(products != null) {
                            allProducts.add(products)
                        }
-                       else {
-                           callback(emptyList(), false, "product not found")
-                       }
+
                    }
+                   callback(allProducts, true, "product fetched")
                }
              }
 

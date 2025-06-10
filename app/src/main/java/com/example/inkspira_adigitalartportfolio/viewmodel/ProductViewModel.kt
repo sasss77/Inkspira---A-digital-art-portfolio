@@ -1,5 +1,6 @@
 package com.example.inkspira_adigitalartportfolio.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -39,8 +40,10 @@ class ProductViewModel(val repo : ProductRepository) : ViewModel() {
     fun getAllProduct() {
         repo.getAllProduct  { data, success, message ->
             if (success) {
+                Log.d("check",message)
                 _allProducts.postValue(data)
             } else {
+                Log.d("check",message)
                 _allProducts.postValue(emptyList())
 
             }}
