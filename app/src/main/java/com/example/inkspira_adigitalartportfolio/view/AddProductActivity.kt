@@ -114,7 +114,7 @@ fun addProduct() {
 
                 },
                     modifier = Modifier.fillMaxWidth()) {
-                    Text("Register")
+                    Text("Add Product")
                 }
 
 

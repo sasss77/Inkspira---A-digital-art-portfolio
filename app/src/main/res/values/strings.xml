@@ -6,4 +6,5 @@
     <string name="title_activity_registration">RegistrationActivity</string>
     <string name="title_activity_reset_password">ResetPasswordActivity</string>
     <string name="title_activity_add_product">AddProductActivity</string>
+    <string name="title_activity_update_product">UpdateProductActivity</string>
 </resources>

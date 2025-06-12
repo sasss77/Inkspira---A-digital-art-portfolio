@@ -13,6 +13,17 @@
         android:theme="@style/Theme.InkspiraADigitalArtPortfolio"
         tools:targetApi="31">
         <activity
+            android:name=".view.UpdateProductActivity"
+            android:exported="true"
+            android:label="@string/title_activity_update_product"
+            android:theme="@style/Theme.InkspiraADigitalArtPortfolio">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".view.AddProductActivity"
             android:exported="false"
             android:label="@string/title_activity_add_product"

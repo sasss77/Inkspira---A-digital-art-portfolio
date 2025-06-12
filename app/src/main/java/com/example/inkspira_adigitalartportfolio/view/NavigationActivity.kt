@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -205,6 +206,8 @@ fun Home1() {
     val activity = context as Activity
 
     val products = viewModel.allProducts.observeAsState(initial = emptyList())
+
+    val loading = viewModel.loading.observeAsState(initial = true)
     LaunchedEffect(Unit) {
         viewModel.getAllProduct()
     }
@@ -212,6 +215,13 @@ fun Home1() {
         LazyColumn( modifier = Modifier
             .fillMaxSize()
             .background(color = Color.Gray)) {
+            if (loading.value) {
+                item {
+                    CircularProgressIndicator()
+                }
+            } else {
+
+
 
             items(products.value.size) { index ->
                 val eachProduct = products.value[index]
@@ -222,32 +232,38 @@ fun Home1() {
                         Text("${eachProduct?.description}")
 
                         Row(
-                                modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            IconButton(onClick = {}, colors = IconButtonDefaults.iconButtonColors(
-                                contentColor = Color.Gray
-                            )) {
-                                Icon(Icons.Default.Edit,contentDescription = null)
+                            IconButton(
+                                onClick = {}, colors = IconButtonDefaults.iconButtonColors(
+                                    contentColor = Color.Gray
+                                )
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null)
                             }
 
-                            IconButton(onClick = {
-                                viewModel.deleteProduct(eachProduct?.productID.toString()) {
-                                    success, message ->
-                                    if (success) {
-                                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                    }  else {
-                                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            IconButton(
+                                onClick = {
+                                    viewModel.deleteProduct(eachProduct?.productID.toString()) { success, message ->
+                                        if (success) {
+                                            Toast.makeText(context, message, Toast.LENGTH_LONG)
+                                                .show()
+                                        } else {
+                                            Toast.makeText(context, message, Toast.LENGTH_LONG)
+                                                .show()
+                                        }
                                     }
-                                }
-                            },colors = IconButtonDefaults.iconButtonColors(
-                                contentColor = Color.Red
-                            )) {
-                                Icon(Icons.Default.Delete,contentDescription = null)
+                                }, colors = IconButtonDefaults.iconButtonColors(
+                                    contentColor = Color.Red
+                                )
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null)
                             }
                         }
                     }
                 }
+            }
             }
         }
 
