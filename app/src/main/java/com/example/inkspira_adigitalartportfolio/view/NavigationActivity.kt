@@ -208,9 +208,14 @@ fun Home1() {
     val products = viewModel.allProducts.observeAsState(initial = emptyList())
 
     val loading = viewModel.loading.observeAsState(initial = true)
+
+
     LaunchedEffect(Unit) {
         viewModel.getAllProduct()
     }
+
+
+
 
         LazyColumn( modifier = Modifier
             .fillMaxSize()
@@ -236,7 +241,12 @@ fun Home1() {
                             horizontalArrangement = Arrangement.End
                         ) {
                             IconButton(
-                                onClick = {}, colors = IconButtonDefaults.iconButtonColors(
+                                onClick = {
+                                    val intent = Intent(context, UpdateProductActivity::class.java)
+                                    intent.putExtra("productID", "${eachProduct?.productID}")
+                                    context.startActivity(intent)
+                                },
+                                colors = IconButtonDefaults.iconButtonColors(
                                     contentColor = Color.Gray
                                 )
                             ) {

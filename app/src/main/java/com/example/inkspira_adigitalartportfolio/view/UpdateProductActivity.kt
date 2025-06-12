@@ -17,7 +17,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,27 +27,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.inkspira_adigitalartportfolio.model.ProductModel
 import com.example.inkspira_adigitalartportfolio.repository.ProductRepositoryImpl
-import com.example.inkspira_adigitalartportfolio.view.ui.theme.InkspiraADigitalArtPortfolioTheme
 import com.example.inkspira_adigitalartportfolio.viewmodel.ProductViewModel
+
 
 class UpdateProductActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-                  updateProduct()
+            UpdateProductBody()
         }
     }
 }
 
-
 @Composable
-fun updateProduct() {
-    var productName by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
+fun UpdateProductBody() {
+    var pName by remember { mutableStateOf("") }
+    var pPrice by remember { mutableStateOf("") }
+    var pDesc by remember { mutableStateOf("") }
 
     val repo = remember { ProductRepositoryImpl() }
     val viewModel = remember { ProductViewModel(repo) }
@@ -53,62 +53,90 @@ fun updateProduct() {
     val context = LocalContext.current
     val activity = context as? Activity
 
-    Scaffold() {
-            padding -> LazyColumn(
-        modifier = Modifier.padding(padding).fillMaxSize()
-    ) {
-        item {
-            OutlinedTextField(
-                value = productName,
-                onValueChange = {
-                    productName = it
-                },
-                placeholder = {
-                    Text("Product Name")
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(20.dp))
+    val productID : String? = activity?.intent?.getStringExtra("productID")
 
-            OutlinedTextField(
-                value = price,
-                onValueChange = {
-                    price = it
-                },
-                placeholder = {
-                    Text("price")
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(20.dp))
+    val products = viewModel.products.observeAsState(initial = null)
 
-            OutlinedTextField(
-                value = description,
-                onValueChange = {
-                    description = it
-                },
-                placeholder = {
-                    Text("Description")
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(20.dp))
+    LaunchedEffect(Unit) {
+        viewModel.getProductByID(productID.toString())
+    }
+
+    pName = products.value?.productName ?: ""
+    pDesc = products.value?.description ?: ""
+    pPrice = products.value?.price.toString()
 
 
+    Scaffold { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            item {
+                OutlinedTextField(
+                    value = pName,
+                    onValueChange = {
+                        pName = it
+                    },
+                    placeholder = {
+                        Text("Enter product name")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = pPrice,
+                    onValueChange = {
+                        pPrice = it
+                    },
+                    placeholder = {
+                        Text("Enter price")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            Button(onClick = {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = pDesc,
+                    onValueChange = {
+                        pDesc = it
+                    },
+                    placeholder = {
+                        Text("Enter Description")
+                    },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        var data = mutableMapOf<String,Any?>()
+
+                        data["description"] = pDesc
+                        data["price"] = pPrice.toDouble()
+                        data["productName"] = pName
+                        data["productID"] = productID
+
+                        viewModel.updateProduct(
+                            productID.toString(),data
+                        ) {
+                                success,message->
+                            if(success){
+                                activity?.finish()
+                            }else{
+                                Toast.makeText(context,message, Toast.LENGTH_SHORT).show()
+                            }
+                        }
 
 
-
-            },
-                modifier = Modifier.fillMaxWidth()) {
-                Text("Update Product")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Update Product")
+                }
             }
-
-
-
         }
 
-    }
     }
 }
