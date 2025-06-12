@@ -7,8 +7,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -25,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -214,6 +219,23 @@ fun Home1() {
                         Text("${eachProduct?.productName}")
                         Text("${eachProduct?.price}")
                         Text("${eachProduct?.description}")
+
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            IconButton(onClick = {}, colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = Color.Gray
+                            )) {
+                                Icon(Icons.Default.Edit,contentDescription = null)
+                            }
+
+                            IconButton(onClick = {},colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = Color.Red
+                            )) {
+                                Icon(Icons.Default.Delete,contentDescription = null)
+                            }
+                        }
                     }
                 }
             }
