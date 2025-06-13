@@ -1,5 +1,7 @@
 package com.example.inkspira_adigitalartportfolio.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -8,6 +10,11 @@ import com.example.inkspira_adigitalartportfolio.model.ProductModel
 import com.example.inkspira_adigitalartportfolio.repository.ProductRepository
 
 class ProductViewModel(val repo : ProductRepository) : ViewModel() {
+
+    fun uploadImage(context: Context,imageUri: Uri, callback: (String?) -> Unit){
+        repo.uploadImage(context,imageUri,callback) }
+
+
     fun addProduct(model: ProductModel, callback: (Boolean, String) -> Unit) {
         repo.addProduct(model, callback)
     }

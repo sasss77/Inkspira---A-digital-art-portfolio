@@ -1,5 +1,7 @@
 package com.example.inkspira_adigitalartportfolio.repository
 
+import android.content.Context
+import android.net.Uri
 import com.example.inkspira_adigitalartportfolio.model.ProductModel
 
 interface ProductRepository {
@@ -8,4 +10,9 @@ interface ProductRepository {
     fun updateProduct(productID : String, productData : MutableMap<String, Any?>, callback: (Boolean, String) -> Unit)
     fun getProductByID(productID : String, callback : (ProductModel?, Boolean, String) ->Unit)
     fun getAllProduct(callback: (List<ProductModel?>, Boolean, String) -> Unit)
+
+
+    fun uploadImage(context: Context,imageUri: Uri, callback: (String?) -> Unit)
+
+    fun getFileNameFromUri(context: Context,uri: Uri): String?
 }
