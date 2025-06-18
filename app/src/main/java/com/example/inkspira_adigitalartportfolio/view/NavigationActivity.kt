@@ -292,12 +292,21 @@ fun Home2() {
 }
 
 
+
+
+
+
+
+
 @Composable
 fun Home3() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color.Green)
+            .background(color = Color.Gray)
     ) {
+
+
+
     }
     }

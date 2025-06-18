@@ -17,6 +17,17 @@
         tools:replace="android:fullBackupContent"
         tools:targetApi="31">
         <activity
+            android:name=".view.UpdateUserActivity"
+            android:exported="true"
+            android:label="@string/title_activity_update_user"
+            android:theme="@style/Theme.InkspiraADigitalArtPortfolio">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".view.SplashActivity"
             android:exported="true"
             android:label="@string/title_activity_splash"
