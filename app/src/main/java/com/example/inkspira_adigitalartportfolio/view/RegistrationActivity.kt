@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -209,6 +210,29 @@ fun RegBody(innerPaddingValues: PaddingValues) {
         },
             modifier = Modifier.fillMaxWidth()) {
             Text("Register")
+        }
+
+
+
+        //Forget password
+        Row(
+            modifier = Modifier
+                .padding(vertical = 15.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+
+        ) {
+            Text(
+                text = "Already have an account? Click here",
+                color = Color.Blue,
+                modifier = Modifier.padding(horizontal = 15.dp).clickable {
+                    val intent = Intent(context, LoginActivity:: class.java)
+                    context.startActivity(intent)
+                }
+
+            )
+
+
         }
 
     }

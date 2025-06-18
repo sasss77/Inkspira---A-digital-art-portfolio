@@ -180,7 +180,10 @@ fun loginBody() {
                 Text(
                     text = "forgot password? Click here",
                     color = Color.Blue,
-                    modifier = Modifier.padding(horizontal = 15.dp)
+                    modifier = Modifier.padding(horizontal = 15.dp).clickable {
+                    val intent = Intent(context, ForgetPasswordActivity:: class.java)
+                    context.startActivity(intent)
+                    }
 
                 )
 
@@ -234,12 +237,12 @@ fun loginBody() {
                     textDecoration = TextDecoration.Underline,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-//                modifier = Modifier.clickable {
-//                    val intent = Intent(context, RegistrationActivity:: class.java)
-//                    context.startActivity(intent)
-//                    //to destroy activity
-////                        activity.finish()
-//                }
+                modifier = Modifier.clickable {
+                    val intent = Intent(context, RegistrationActivity:: class.java)
+                    context.startActivity(intent)
+                    //to destroy activity
+                        activity.finish()
+                }
                 )
             }
 

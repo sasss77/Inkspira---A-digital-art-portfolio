@@ -57,7 +57,7 @@ fun splashScreen() {
         delay(2000)
 
         if(localEmail.isEmpty()){
-            val intent = Intent(context, MainActivity::class.java)
+            val intent = Intent(context, NavigationActivity::class.java)
             context.startActivity(intent)
             activity.finish()
         }else{
