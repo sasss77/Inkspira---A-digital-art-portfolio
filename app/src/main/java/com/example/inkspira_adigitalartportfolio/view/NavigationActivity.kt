@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,8 +37,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,7 +59,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.inkspira_adigitalartportfolio.repository.ProductRepositoryImpl
+import com.example.inkspira_adigitalartportfolio.repository.UserRepositoryImpl
 import com.example.inkspira_adigitalartportfolio.viewmodel.ProductViewModel
+import com.example.inkspira_adigitalartportfolio.viewmodel.UserViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 class NavigationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -300,13 +308,125 @@ fun Home2() {
 
 @Composable
 fun Home3() {
+
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val activity = context as Activity
+
+    val repo = remember { UserRepositoryImpl() }
+    val viewModel = remember { UserViewModel(repo) }
+
+
+
+//    val userID : String? = activity?.intent?.getStringExtra("userID")
+    val userID = FirebaseAuth.getInstance().currentUser?.uid
+
+    val user = viewModel.users.observeAsState(initial = null)
+
+    LaunchedEffect(Unit) {
+        viewModel.getUserByID(userID.toString())
+    }
+
+
+    firstName = user.value?.firstName ?: ""
+    lastName = user.value?.lastName ?: ""
+    email = user.value?.email ?: ""
+    country = user.value?.address ?: ""
+
+
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color.Gray)
+            .background(color = Color.White)
     ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()) {
+
+        Text(text = "User Profile", fontSize = 24.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        
 
 
+
+
+        Text(text = "First Name:", color = Color.Black, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp))
+        OutlinedTextField(
+            value = firstName,
+            onValueChange = {
+                firstName = it
+            },
+            placeholder = {
+                Text("First Name")
+            },
+            modifier = Modifier.fillMaxWidth(),
+
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(text = "Last Name:", color = Color.Black, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp))
+        OutlinedTextField(
+            value = lastName,
+            onValueChange = {
+                lastName = it
+            },
+            placeholder = {
+                Text("Last Name")
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(text = "Email:", color = Color.Black, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp))
+        OutlinedTextField(
+            value = email,
+            onValueChange = {
+                email = it
+            },
+            placeholder = {
+                Text("Address")
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(text = "Address:", color = Color.Black, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp))
+        OutlinedTextField(
+            value = country,
+            onValueChange = {
+                country = it
+            },
+            placeholder = {
+                Text("Address")
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Button(
+            onClick = {
+                val userID = FirebaseAuth.getInstance().currentUser?.uid
+                val intent = Intent(context, UpdateUserActivity:: class.java)
+                intent.putExtra("userID", "${userID}")
+                context.startActivity(intent)
+            },
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text("Update")
+        }
 
     }
     }
