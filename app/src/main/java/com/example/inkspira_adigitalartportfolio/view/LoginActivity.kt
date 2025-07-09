@@ -85,6 +85,56 @@ fun InkspiraDarkThemeLogin(content: @Composable () -> Unit) {
 }
 
 @Composable
+fun CustomSnackbarLogin(snackbarData: SnackbarData) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1A1A2E).copy(alpha = 0.95f)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 12.dp
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF8B5CF6).copy(alpha = 0.8f),
+                            Color(0xFFEC4899).copy(alpha = 0.8f),
+                            Color(0xFF06B6D4).copy(alpha = 0.8f)
+                        )
+                    )
+                )
+                .padding(2.dp) // Border effect
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = Color(0xFF1A1A2E),
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
+                Text(
+                    text = snackbarData.visuals.message,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun LoginScreen() {
     val repo = remember { UserRepositoryImpl() }
     val userViewModel = remember { UserViewModel(repo) }
@@ -163,44 +213,14 @@ fun LoginScreen() {
                 )
             )
     ) {
-        // Snackbar Host
+        // Enhanced Custom Snackbar Host (matching SplashActivity style)
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         ) { snackbarData ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1A1A2E).copy(alpha = 0.95f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFF8B5CF6).copy(alpha = 0.8f),
-                                    Color(0xFFEC4899).copy(alpha = 0.8f),
-                                    Color(0xFF06B6D4).copy(alpha = 0.8f)
-                                )
-                            )
-                        )
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = snackbarData.visuals.message,
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
+            CustomSnackbarLogin(snackbarData = snackbarData)
         }
+
         // Animated background particles
         repeat(12) { index ->
             val delay = index * 1000
