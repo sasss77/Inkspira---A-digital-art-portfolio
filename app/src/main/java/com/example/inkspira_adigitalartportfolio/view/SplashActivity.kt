@@ -43,7 +43,7 @@ class SplashActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             InkspiraDarkTheme {
-                EnhancedSplashScreen()
+                SplashScreen()
             }
         }
     }
@@ -68,7 +68,7 @@ fun InkspiraDarkTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun EnhancedSplashScreen() {
+fun SplashScreen() {
     val context = LocalContext.current
     val activity = context as Activity
 
