@@ -6,8 +6,8 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.inkspira_adigitalartportfolio.model.ProductModel
-import com.example.inkspira_adigitalartportfolio.repository.ProductRepository
+import com.example.inkspira_adigitalartportfolio.model.data.ProductModel
+import com.example.inkspira_adigitalartportfolio.controller.ProductRepository
 
 class ProductViewModel(val repo : ProductRepository) : ViewModel() {
 

@@ -29,11 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.inkspira_adigitalartportfolio.model.UserModel
-import com.example.inkspira_adigitalartportfolio.repository.UserRepositoryImpl
-import com.example.inkspira_adigitalartportfolio.view.ui.theme.InkspiraADigitalArtPortfolioTheme
+import com.example.inkspira_adigitalartportfolio.controller.repositoryImpl.UserRepositoryImpl
 import com.example.inkspira_adigitalartportfolio.viewmodel.UserViewModel
 
 class UpdateUserActivity : ComponentActivity() {

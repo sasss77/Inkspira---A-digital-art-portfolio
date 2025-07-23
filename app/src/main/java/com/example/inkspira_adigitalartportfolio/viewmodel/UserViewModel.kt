@@ -3,8 +3,8 @@ package com.example.inkspira_adigitalartportfolio.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.inkspira_adigitalartportfolio.model.UserModel
-import com.example.inkspira_adigitalartportfolio.repository.UserRepository
+import com.example.inkspira_adigitalartportfolio.model.data.UserModel
+import com.example.inkspira_adigitalartportfolio.controller.repository.UserRepository
 import com.google.firebase.auth.FirebaseUser
 
 class UserViewModel(val repo : UserRepository) : ViewModel() {
