@@ -1,8 +1,8 @@
-package com.example.inkspira_adigitalartportfolio.repository
+package com.example.inkspira_adigitalartportfolio.controller
 
 import android.content.Context
 import android.net.Uri
-import com.example.inkspira_adigitalartportfolio.model.ProductModel
+import com.example.inkspira_adigitalartportfolio.model.data.ProductModel
 
 interface ProductRepository {
     fun addProduct(model: ProductModel, callback: (Boolean, String) -> Unit)

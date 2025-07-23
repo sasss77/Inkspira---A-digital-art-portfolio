@@ -1,6 +1,7 @@
-package com.example.inkspira_adigitalartportfolio.repository
+package com.example.inkspira_adigitalartportfolio.controller.repositoryImpl
 
-import com.example.inkspira_adigitalartportfolio.model.UserModel
+import com.example.inkspira_adigitalartportfolio.controller.repository.UserRepository
+import com.example.inkspira_adigitalartportfolio.model.data.UserModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.DataSnapshot
@@ -103,7 +104,7 @@ class UserRepositoryImpl : UserRepository {
         userID: String,
         callback: (UserModel?, Boolean, String) -> Unit
     ) {
-        ref.child(userID).addValueEventListener(object : ValueEventListener{
+        ref.child(userID).addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if(snapshot.exists()){
                     val users = snapshot.getValue(UserModel::class.java)

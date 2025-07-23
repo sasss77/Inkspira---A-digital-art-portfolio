@@ -1,6 +1,6 @@
-package com.example.inkspira_adigitalartportfolio.repository
+package com.example.inkspira_adigitalartportfolio.controller.repository
 
-import com.example.inkspira_adigitalartportfolio.model.UserModel
+import com.example.inkspira_adigitalartportfolio.model.data.UserModel
 import com.google.firebase.auth.FirebaseUser
 
 interface UserRepository {
