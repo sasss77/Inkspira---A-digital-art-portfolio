@@ -1,5 +1,4 @@
-package com.example.inkspira_adigitalartportfolio.model
-
+package com.example.inkspira_adigitalartportfolio.model.data
 
 data class ProductModel(
     var productID : String = "",

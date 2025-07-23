@@ -13,7 +13,7 @@ import androidx.activity.result.ActivityResultRegistryOwner
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 
-class ImageUtils {
+
     class ImageUtils(
         private val activity: Activity,
         private val registryOwner: ActivityResultRegistryOwner
@@ -76,4 +76,3 @@ class ImageUtils {
         }
 
     }
-}
