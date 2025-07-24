@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.inkspira_adigitalartportfolio.controller.repositoryImpl.UserRepositoryImpl
-import com.example.inkspira_adigitalartportfolio.viewmodel.UserViewModel
 
 class UpdateUserActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

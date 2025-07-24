@@ -27,9 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.inkspira_adigitalartportfolio.controller.ProductRepositoryImpl
 import com.example.inkspira_adigitalartportfolio.utils.ImageUtils.ImageUtils
-import com.example.inkspira_adigitalartportfolio.viewmodel.ProductViewModel
 
 
 class UpdateProductActivity : ComponentActivity() {

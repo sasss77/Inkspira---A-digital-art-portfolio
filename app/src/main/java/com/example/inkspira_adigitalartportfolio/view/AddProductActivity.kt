@@ -35,11 +35,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.inkspira_adigitalartportfolio.model.data.ProductModel
-import com.example.inkspira_adigitalartportfolio.controller.ProductRepositoryImpl
 import com.example.inkspira_adigitalartportfolio.utils.ImageUtils.ImageUtils
 import com.example.inkspira_adigitalartportfolio.R
-
-import com.example.inkspira_adigitalartportfolio.viewmodel.ProductViewModel
 
 class AddProductActivity : ComponentActivity() {
     lateinit var imageUtils: ImageUtils

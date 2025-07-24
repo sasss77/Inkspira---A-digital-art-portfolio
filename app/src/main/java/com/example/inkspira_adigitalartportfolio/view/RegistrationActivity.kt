@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import com.example.inkspira_adigitalartportfolio.model.data.UserModel
 import com.example.inkspira_adigitalartportfolio.controller.repositoryImpl.UserRepositoryImpl
-import com.example.inkspira_adigitalartportfolio.viewmodel.UserViewModel
 
 class RegistrationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
