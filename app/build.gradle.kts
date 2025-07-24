@@ -61,4 +61,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("com.cloudinary:cloudinary-android:3.0.2")
     implementation("io.coil-kt:coil-compose:2.2.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 }
