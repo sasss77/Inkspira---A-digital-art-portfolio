@@ -17,9 +17,9 @@
         tools:replace="android:fullBackupContent"
         tools:targetApi="31">
         <activity
-            android:name=".view.UpdateUserActivity"
+            android:name=".view.activities.MainActivity"
             android:exported="true"
-            android:label="@string/title_activity_update_user"
+            android:label="@string/title_activity_main"
             android:theme="@style/Theme.InkspiraADigitalArtPortfolio">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -31,28 +31,6 @@
             android:name=".view.SplashActivity"
             android:exported="true"
             android:label="@string/title_activity_splash"
-            android:theme="@style/Theme.InkspiraADigitalArtPortfolio">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".view.UpdateProductActivity"
-            android:exported="true"
-            android:label="@string/title_activity_update_product"
-            android:theme="@style/Theme.InkspiraADigitalArtPortfolio">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".view.AddProductActivity"
-            android:exported="true"
-            android:label="@string/title_activity_add_product"
             android:theme="@style/Theme.InkspiraADigitalArtPortfolio">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -83,31 +61,9 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".view.NavigationActivity"
-            android:exported="true"
-            android:label="@string/title_activity_navigation"
-            android:theme="@style/Theme.InkspiraADigitalArtPortfolio">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
             android:name=".view.LoginActivity"
             android:exported="true"
             android:label="@string/title_activity_login"
-            android:theme="@style/Theme.InkspiraADigitalArtPortfolio">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".view.MainActivity"
-            android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.InkspiraADigitalArtPortfolio">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
