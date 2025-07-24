@@ -34,6 +34,9 @@ object Constants {
     const val ROLE_VIEWER = "VIEWER"
     const val ROLE_BOTH = "BOTH"
 
+
+
+
     // Error Messages
     const val ERROR_NETWORK = "Network error. Please check your connection."
     const val ERROR_UNKNOWN = "Something went wrong. Please try again."

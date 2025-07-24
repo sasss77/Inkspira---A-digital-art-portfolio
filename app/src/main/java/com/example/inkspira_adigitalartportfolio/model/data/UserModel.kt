@@ -27,3 +27,14 @@ data class UserModel(
         }
     }
 }
+
+fun UserModel.toMap(): Map<String, Any> {
+    return mapOf(
+        "userId" to userId,
+        "email" to email,
+        "displayName" to displayName,
+        "role" to role.name,
+        "profileImageUrl" to profileImageUrl,
+        "createdAt" to createdAt
+    )
+}
