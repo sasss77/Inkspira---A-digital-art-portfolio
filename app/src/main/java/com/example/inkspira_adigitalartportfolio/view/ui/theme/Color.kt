@@ -27,3 +27,12 @@ val SuccessColor = Color(0xFF10B981)        // Emerald Green - Success states
 val ErrorColor = Color(0xFFEF4444)          // Red - Error states
 val WarningColor = Color(0xFFF59E0B)        // Amber - Warning states
 val InfoColor = Color(0xFF3B82F6)           // Blue - Info states
+
+
+val OverlayLight = Color(0x40FFFFFF)        // Light overlay
+val OverlayDark = Color(0x80000000)         // Dark overlay
+val GlassmorphicOverlay = Color(0x1AFFFFFF) // Glassmorphic effect
+
+val TextPrimary = Color(0xFFFFFFFF)         // Primary text on dark backgrounds
+val TextSecondary = Color(0xFFE5E7EB)       // Secondary text
+val TextMuted = Color(0xFF9CA3AF)           // Muted text
