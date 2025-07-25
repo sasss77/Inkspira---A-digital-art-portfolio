@@ -2,7 +2,7 @@
 
 package com.example.inkspira_adigitalartportfolio.model.response
 
-import com.example.inkspira_adigitalartportfolio.model.data.UserModel
+import UserModel
 
 
 data class AuthResponse(

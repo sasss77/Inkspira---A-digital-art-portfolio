@@ -1,6 +1,6 @@
 package com.example.inkspira_adigitalartportfolio.controller.remote
 
-import com.example.inkspira_adigitalartportfolio.model.data.UserModel
+
 import com.example.inkspira_adigitalartportfolio.model.response.AuthResponse
 import com.example.inkspira_adigitalartportfolio.utils.NetworkResult
 import com.google.firebase.auth.FirebaseAuth

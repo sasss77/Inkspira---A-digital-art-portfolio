@@ -29,7 +29,7 @@ class ArtworkViewModel(
     val publicArtworks: StateFlow<List<ArtworkModel>> = _publicArtworks.asStateFlow()
 
     // Upload state
-    private val _uploadState = MutableStateFlow<NetworkResult<ArtworkModel>>(NetworkResult.Loading(false))
+    private val _uploadState = MutableStateFlow<NetworkResult<ArtworkModel>>(NetworkResult.Loading())
     val uploadState: StateFlow<NetworkResult<ArtworkModel>> = _uploadState.asStateFlow()
 
     // Loading states
@@ -43,6 +43,10 @@ class ArtworkViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    // Success message for user feedback
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
+
     // Selected artwork for details
     private val _selectedArtwork = MutableStateFlow<ArtworkModel?>(null)
     val selectedArtwork: StateFlow<ArtworkModel?> = _selectedArtwork.asStateFlow()
@@ -55,7 +59,7 @@ class ArtworkViewModel(
         loadPublicArtworks()
     }
 
-    // Upload new artwork
+    // Upload new artwork - COMPLETELY FIXED for all type issues
     fun uploadArtwork(
         title: String,
         description: String,
@@ -71,8 +75,9 @@ class ArtworkViewModel(
             return
         }
 
+        // Handle nullable getCurrentUserId() properly
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) {
+        if (currentUserId.isNullOrBlank()) {
             _errorMessage.value = "User not logged in"
             return
         }
@@ -84,14 +89,23 @@ class ArtworkViewModel(
             // First, upload image to Cloudinary
             when (val imageResult = cloudinaryRepository.uploadImage(imageUri, context)) {
                 is NetworkResult.Success -> {
-                    // Create artwork object
+                    // ✅ FIXED: Safe access to imageResult.data with proper null handling
+                    val imageUrl = imageResult.data
+                    if (imageUrl.isNullOrBlank()) {
+                        _errorMessage.value = "Failed to get image URL"
+                        _uploadState.value = NetworkResult.Error("Failed to get image URL")
+                        _isUploading.value = false
+                        return@launch
+                    }
+
+                    // Create artwork object with validated data
                     val artworkId = generateArtworkId()
                     val artwork = ArtworkModel(
                         artworkId = artworkId,
                         artistId = currentUserId,
                         title = title.trim(),
                         description = description.trim(),
-                        imageUrl = imageResult.data,
+                        imageUrl = imageUrl,
                         tags = tags.map { it.trim() },
                         uploadedAt = System.currentTimeMillis(),
                         isPublic = isPublic
@@ -100,15 +114,25 @@ class ArtworkViewModel(
                     // Save artwork to database
                     when (val artworkResult = artworkRepository.createArtwork(artwork)) {
                         is NetworkResult.Success -> {
-                            _uploadState.value = NetworkResult.Success(artworkResult.data)
+                            // ✅ FIXED: Properly handle nullable successData
+                            val successData = artworkResult.data
+                            if (successData != null) {
+                                _uploadState.value = NetworkResult.Success(successData)
+                                _successMessage.value = "Artwork uploaded successfully!"
+                            } else {
+                                _uploadState.value = NetworkResult.Error("Failed to retrieve uploaded artwork")
+                                _errorMessage.value = "Failed to retrieve uploaded artwork"
+                            }
                             _isUploading.value = false
                             // Refresh artwork lists
                             loadUserArtworks()
                             loadPublicArtworks()
                         }
                         is NetworkResult.Error -> {
-                            _errorMessage.value = artworkResult.message
-                            _uploadState.value = NetworkResult.Error(artworkResult.message)
+                            // ✅ FIXED: Properly handle nullable errorMsg
+                            val errorMsg = artworkResult.message ?: "Unknown error occurred"
+                            _errorMessage.value = "Failed to save artwork: $errorMsg"
+                            _uploadState.value = NetworkResult.Error(errorMsg)
                             _isUploading.value = false
                         }
                         is NetworkResult.Loading -> {
@@ -117,8 +141,10 @@ class ArtworkViewModel(
                     }
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = imageResult.message
-                    _uploadState.value = NetworkResult.Error(imageResult.message)
+                    // ✅ FIXED: Properly handle nullable errorMsg
+                    val errorMsg = imageResult.message ?: "Image upload failed"
+                    _errorMessage.value = "Failed to upload image: $errorMsg"
+                    _uploadState.value = NetworkResult.Error(errorMsg)
                     _isUploading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -128,24 +154,26 @@ class ArtworkViewModel(
         }
     }
 
-    // Load user's own artworks
+    // Load user's own artworks - FIXED for null safety
     fun loadUserArtworks() {
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) {
+        if (currentUserId.isNullOrBlank()) {
             _errorMessage.value = "User not logged in"
             return
         }
 
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
 
             when (val result = artworkRepository.getArtworksByArtist(currentUserId)) {
                 is NetworkResult.Success -> {
-                    _artworkList.value = result.data
+                    _artworkList.value = result.data ?: emptyList()
                     _isLoading.value = false
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Failed to load artworks"
+                    _errorMessage.value = "Failed to load your artworks: $errorMsg"
                     _isLoading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -159,14 +187,16 @@ class ArtworkViewModel(
     fun loadPublicArtworks() {
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
 
             when (val result = artworkRepository.getAllPublicArtworks()) {
                 is NetworkResult.Success -> {
-                    _publicArtworks.value = result.data
+                    _publicArtworks.value = result.data ?: emptyList()
                     _isLoading.value = false
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Failed to load public artworks"
+                    _errorMessage.value = "Failed to load public artworks: $errorMsg"
                     _isLoading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -185,14 +215,16 @@ class ArtworkViewModel(
 
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
 
             when (val result = artworkRepository.searchArtworks(query.trim())) {
                 is NetworkResult.Success -> {
-                    _searchResults.value = result.data
+                    _searchResults.value = result.data ?: emptyList()
                     _isLoading.value = false
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Search failed"
+                    _errorMessage.value = "Search failed: $errorMsg"
                     _isLoading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -202,20 +234,38 @@ class ArtworkViewModel(
         }
     }
 
-    // Update artwork
+    // Update artwork - ENHANCED with validation
     fun updateArtwork(artwork: ArtworkModel) {
+        if (artwork.artworkId.isBlank()) {
+            _errorMessage.value = "Invalid artwork ID"
+            return
+        }
+
+        val currentUserId = authRepository.getCurrentUserId()
+        if (currentUserId.isNullOrBlank()) {
+            _errorMessage.value = "User not logged in"
+            return
+        }
+
+        if (artwork.artistId != currentUserId) {
+            _errorMessage.value = "You can only edit your own artworks"
+            return
+        }
+
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
 
             when (val result = artworkRepository.updateArtwork(artwork)) {
                 is NetworkResult.Success -> {
+                    _successMessage.value = "Artwork updated successfully!"
                     _isLoading.value = false
-                    // Refresh lists
                     loadUserArtworks()
                     loadPublicArtworks()
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Update failed"
+                    _errorMessage.value = "Failed to update artwork: $errorMsg"
                     _isLoading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -225,20 +275,27 @@ class ArtworkViewModel(
         }
     }
 
-    // Delete artwork
+    // Delete artwork - ENHANCED with validation
     fun deleteArtwork(artworkId: String) {
+        if (artworkId.isBlank()) {
+            _errorMessage.value = "Invalid artwork ID"
+            return
+        }
+
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
 
             when (val result = artworkRepository.deleteArtwork(artworkId)) {
                 is NetworkResult.Success -> {
+                    _successMessage.value = "Artwork deleted successfully!"
                     _isLoading.value = false
-                    // Refresh lists
                     loadUserArtworks()
                     loadPublicArtworks()
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Delete failed"
+                    _errorMessage.value = "Failed to delete artwork: $errorMsg"
                     _isLoading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -248,20 +305,60 @@ class ArtworkViewModel(
         }
     }
 
-    // Toggle artwork visibility
+    // Toggle artwork visibility - ENHANCED with validation
     fun toggleArtworkVisibility(artworkId: String, isPublic: Boolean) {
+        if (artworkId.isBlank()) {
+            _errorMessage.value = "Invalid artwork ID"
+            return
+        }
+
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
 
             when (val result = artworkRepository.updateArtworkVisibility(artworkId, isPublic)) {
                 is NetworkResult.Success -> {
+                    val visibilityText = if (isPublic) "public" else "private"
+                    _successMessage.value = "Artwork is now $visibilityText!"
                     _isLoading.value = false
-                    // Refresh lists
                     loadUserArtworks()
                     loadPublicArtworks()
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Visibility update failed"
+                    _errorMessage.value = "Failed to update visibility: $errorMsg"
+                    _isLoading.value = false
+                }
+                is NetworkResult.Loading -> {
+                    _isLoading.value = true
+                }
+            }
+        }
+    }
+
+    // Get artwork by ID - FIXED method for artwork details
+    fun getArtworkById(artworkId: String) {
+        if (artworkId.isBlank()) {
+            _errorMessage.value = "Invalid artwork ID"
+            return
+        }
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+
+            when (val result = artworkRepository.getArtworkById(artworkId)) {
+                is NetworkResult.Success -> {
+                    result.data?.let { artwork ->
+                        _selectedArtwork.value = artwork
+                    } ?: run {
+                        _errorMessage.value = "Artwork not found"
+                    }
+                    _isLoading.value = false
+                }
+                is NetworkResult.Error -> {
+                    val errorMsg = result.message ?: "Failed to load artwork"
+                    _errorMessage.value = "Failed to load artwork: $errorMsg"
                     _isLoading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -283,12 +380,35 @@ class ArtworkViewModel(
 
     // Get optimized image URL
     fun getOptimizedImageUrl(imageUrl: String, width: Int = 400, height: Int = 400): String {
-        return cloudinaryRepository.getOptimizedImageUrl(imageUrl, width, height)
+        return if (imageUrl.isNotBlank()) {
+            cloudinaryRepository.getOptimizedImageUrl(imageUrl, width, height)
+        } else {
+            imageUrl
+        }
     }
 
     // Get thumbnail URL
     fun getThumbnailUrl(imageUrl: String, size: Int = 300): String {
-        return cloudinaryRepository.getThumbnailUrl(imageUrl, size)
+        return if (imageUrl.isNotBlank()) {
+            cloudinaryRepository.getThumbnailUrl(imageUrl, size)
+        } else {
+            imageUrl
+        }
+    }
+
+    // Check if current user can edit artwork
+    fun canEditArtwork(artwork: ArtworkModel): Boolean {
+        val currentUserId = authRepository.getCurrentUserId()
+        return currentUserId != null && artwork.artistId == currentUserId
+    }
+
+    // Get artwork stats
+    fun getArtworkStats(): Map<String, Int> {
+        return mapOf(
+            "total" to _artworkList.value.size,
+            "public" to _artworkList.value.count { it.isPublic },
+            "private" to _artworkList.value.count { !it.isPublic }
+        )
     }
 
     // Clear error message
@@ -296,9 +416,20 @@ class ArtworkViewModel(
         _errorMessage.value = null
     }
 
+    // Clear success message
+    fun clearSuccessMessage() {
+        _successMessage.value = null
+    }
+
     // Clear search results
     fun clearSearchResults() {
         _searchResults.value = emptyList()
+    }
+
+    // Refresh all artwork data
+    fun refreshAllData() {
+        loadUserArtworks()
+        loadPublicArtworks()
     }
 
     // Generate unique artwork ID

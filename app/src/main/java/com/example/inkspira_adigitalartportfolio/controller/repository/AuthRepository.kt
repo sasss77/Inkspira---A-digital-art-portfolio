@@ -1,7 +1,8 @@
 package com.example.inkspira_adigitalartportfolio.controller.repository
 
 
-import com.example.inkspira_adigitalartportfolio.model.data.UserModel
+
+import UserModel
 import com.example.inkspira_adigitalartportfolio.model.response.AuthResponse
 import com.example.inkspira_adigitalartportfolio.utils.NetworkResult
 

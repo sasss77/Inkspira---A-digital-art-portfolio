@@ -42,10 +42,11 @@ class FavoritesViewModel(
         loadUserFavorites()
     }
 
-    // Load user's favorite artworks
+    // Load user's favorite artworks - FIXED for null safety
     fun loadUserFavorites() {
+        // ✅ FIXED: Handle nullable getCurrentUserId() properly
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) {
+        if (currentUserId.isNullOrBlank()) {
             _errorMessage.value = "User not logged in"
             return
         }
@@ -56,13 +57,16 @@ class FavoritesViewModel(
 
             when (val result = favoriteRepository.getUserFavorites(currentUserId)) {
                 is NetworkResult.Success -> {
-                    _favoriteArtworks.value = result.data
+                    // ✅ FIXED: Handle nullable data with Elvis operator
+                    val favoritesList = result.data ?: emptyList()
+                    _favoriteArtworks.value = favoritesList
                     // Update favorited set for quick lookup
-                    _favoritedArtworks.value = result.data.map { it.artworkId }.toSet()
+                    _favoritedArtworks.value = favoritesList.map { it.artworkId }.toSet()
                     _isLoading.value = false
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Failed to load favorites"
+                    _errorMessage.value = errorMsg
                     _isLoading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -74,9 +78,15 @@ class FavoritesViewModel(
 
     // Add artwork to favorites
     fun addToFavorites(artworkId: String) {
+        // ✅ FIXED: Handle nullable getCurrentUserId() properly
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) {
+        if (currentUserId.isNullOrBlank()) {
             _errorMessage.value = "User not logged in"
+            return
+        }
+
+        if (artworkId.isBlank()) {
+            _errorMessage.value = "Invalid artwork ID"
             return
         }
 
@@ -92,7 +102,8 @@ class FavoritesViewModel(
                     loadUserFavorites()
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Failed to add to favorites"
+                    _errorMessage.value = errorMsg
                 }
                 is NetworkResult.Loading -> {
                     // Handle loading state if needed
@@ -103,9 +114,15 @@ class FavoritesViewModel(
 
     // Remove artwork from favorites
     fun removeFromFavorites(artworkId: String) {
+        // ✅ FIXED: Handle nullable getCurrentUserId() properly
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) {
+        if (currentUserId.isNullOrBlank()) {
             _errorMessage.value = "User not logged in"
+            return
+        }
+
+        if (artworkId.isBlank()) {
+            _errorMessage.value = "Invalid artwork ID"
             return
         }
 
@@ -121,7 +138,8 @@ class FavoritesViewModel(
                     loadUserFavorites()
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Failed to remove from favorites"
+                    _errorMessage.value = errorMsg
                 }
                 is NetworkResult.Loading -> {
                     // Handle loading state if needed
@@ -147,13 +165,16 @@ class FavoritesViewModel(
     // Check favorite status from repository (for accurate state)
     fun checkFavoriteStatus(artworkId: String) {
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) return
+        if (currentUserId.isNullOrBlank()) return
+
+        if (artworkId.isBlank()) return
 
         viewModelScope.launch {
             when (val result = favoriteRepository.isFavorited(currentUserId, artworkId)) {
                 is NetworkResult.Success -> {
+                    val isFavorited = result.data ?: false
                     val currentSet = _favoritedArtworks.value.toMutableSet()
-                    if (result.data) {
+                    if (isFavorited) {
                         currentSet.add(artworkId)
                     } else {
                         currentSet.remove(artworkId)
@@ -173,7 +194,7 @@ class FavoritesViewModel(
     // Clear all favorites
     fun clearAllFavorites() {
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) {
+        if (currentUserId.isNullOrBlank()) {
             _errorMessage.value = "User not logged in"
             return
         }
@@ -190,7 +211,8 @@ class FavoritesViewModel(
                     _isLoading.value = false
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Failed to clear favorites"
+                    _errorMessage.value = errorMsg
                     _isLoading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -202,12 +224,20 @@ class FavoritesViewModel(
 
     // Get optimized image URL for favorites display
     fun getOptimizedImageUrl(imageUrl: String, width: Int = 300, height: Int = 300): String {
-        return cloudinaryRepository.getOptimizedImageUrl(imageUrl, width, height)
+        return if (imageUrl.isNotBlank()) {
+            cloudinaryRepository.getOptimizedImageUrl(imageUrl, width, height)
+        } else {
+            imageUrl
+        }
     }
 
     // Get thumbnail URL for favorites grid
     fun getThumbnailUrl(imageUrl: String, size: Int = 200): String {
-        return cloudinaryRepository.getThumbnailUrl(imageUrl, size)
+        return if (imageUrl.isNotBlank()) {
+            cloudinaryRepository.getThumbnailUrl(imageUrl, size)
+        } else {
+            imageUrl
+        }
     }
 
     // Get favorites count

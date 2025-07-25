@@ -1,13 +1,14 @@
 package com.example.inkspira_adigitalartportfolio.viewmodel
 
+import UserModel
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.inkspira_adigitalartportfolio.controller.repository.AuthRepository
 import com.example.inkspira_adigitalartportfolio.controller.repository.UserRepository
+import com.example.inkspira_adigitalartportfolio.controller.repository.AuthRepository
 import com.example.inkspira_adigitalartportfolio.controller.repository.CloudinaryRepository
-import com.example.inkspira_adigitalartportfolio.model.data.UserModel
+
 import com.example.inkspira_adigitalartportfolio.model.data.UserRole
 import com.example.inkspira_adigitalartportfolio.utils.NetworkResult
 import com.example.inkspira_adigitalartportfolio.utils.ValidationUtils
@@ -27,7 +28,7 @@ class UserProfileViewModel(
     val userProfile: StateFlow<UserModel?> = _userProfile.asStateFlow()
 
     // Profile update state
-    private val _updateState = MutableStateFlow<NetworkResult<UserModel>>(NetworkResult.Loading(false))
+    private val _updateState = MutableStateFlow<NetworkResult<UserModel>>(NetworkResult.Loading())
     val updateState: StateFlow<NetworkResult<UserModel>> = _updateState.asStateFlow()
 
     // Loading states
@@ -52,10 +53,11 @@ class UserProfileViewModel(
         loadUserProfile()
     }
 
-    // Load current user profile
+    // Load current user profile - FIXED for null safety
     fun loadUserProfile() {
+        // ✅ FIXED: Handle nullable getCurrentUserId() properly
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) {
+        if (currentUserId.isNullOrBlank()) {
             _errorMessage.value = "User not logged in"
             return
         }
@@ -66,11 +68,18 @@ class UserProfileViewModel(
 
             when (val result = userRepository.getUserById(currentUserId)) {
                 is NetworkResult.Success -> {
-                    _userProfile.value = result.data
+                    // ✅ FIXED: Handle nullable UserModel data properly
+                    val userData = result.data
+                    if (userData != null) {
+                        _userProfile.value = userData
+                    } else {
+                        _errorMessage.value = "User profile not found"
+                    }
                     _isLoading.value = false
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Failed to load profile"
+                    _errorMessage.value = errorMsg
                     _isLoading.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -80,10 +89,11 @@ class UserProfileViewModel(
         }
     }
 
-    // Update user profile
+    // Update user profile - FIXED for null safety
     fun updateProfile(displayName: String, profileImageUrl: String? = null) {
+        // ✅ FIXED: Handle nullable getCurrentUserId() properly
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) {
+        if (currentUserId.isNullOrBlank()) {
             _errorMessage.value = "User not logged in"
             return
         }
@@ -102,14 +112,22 @@ class UserProfileViewModel(
 
             when (val result = userRepository.updateUserProfile(currentUserId, displayName.trim(), imageUrl)) {
                 is NetworkResult.Success -> {
-                    _userProfile.value = result.data
-                    _updateState.value = NetworkResult.Success(result.data)
-                    _successMessage.value = "Profile updated successfully!"
+                    // ✅ FIXED: Handle nullable UserModel data properly
+                    val updatedUser = result.data
+                    if (updatedUser != null) {
+                        _userProfile.value = updatedUser
+                        _updateState.value = NetworkResult.Success(updatedUser)
+                        _successMessage.value = "Profile updated successfully!"
+                    } else {
+                        _updateState.value = NetworkResult.Error("Profile update failed - no data returned")
+                        _errorMessage.value = "Profile update failed - no data returned"
+                    }
                     _isUpdatingProfile.value = false
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
-                    _updateState.value = NetworkResult.Error(result.message)
+                    val errorMsg = result.message ?: "Profile update failed"
+                    _updateState.value = NetworkResult.Error(errorMsg)
+                    _errorMessage.value = errorMsg
                     _isUpdatingProfile.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -119,7 +137,7 @@ class UserProfileViewModel(
         }
     }
 
-    // Update profile image
+    // Update profile image - FIXED for null safety
     fun updateProfileImage(imageUri: Uri, context: Context) {
         viewModelScope.launch {
             _isUploadingImage.value = true
@@ -128,15 +146,24 @@ class UserProfileViewModel(
             // Upload image to Cloudinary
             when (val imageResult = cloudinaryRepository.uploadImage(imageUri, context)) {
                 is NetworkResult.Success -> {
-                    // Update profile with new image URL
-                    val currentProfile = _userProfile.value
-                    if (currentProfile != null) {
-                        updateProfile(currentProfile.displayName, imageResult.data)
+                    // ✅ FIXED: Handle nullable image URL properly
+                    val imageUrl = imageResult.data
+                    if (!imageUrl.isNullOrBlank()) {
+                        // Update profile with new image URL
+                        val currentProfile = _userProfile.value
+                        if (currentProfile != null) {
+                            updateProfile(currentProfile.displayName, imageUrl)
+                        } else {
+                            _errorMessage.value = "User profile not loaded"
+                        }
+                    } else {
+                        _errorMessage.value = "Failed to get uploaded image URL"
                     }
                     _isUploadingImage.value = false
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = imageResult.message
+                    val errorMsg = imageResult.message ?: "Image upload failed"
+                    _errorMessage.value = errorMsg
                     _isUploadingImage.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -146,10 +173,11 @@ class UserProfileViewModel(
         }
     }
 
-    // Update user role
+    // Update user role - FIXED for null safety
     fun updateUserRole(newRole: UserRole) {
+        // ✅ FIXED: Handle nullable getCurrentUserId() properly
         val currentUserId = authRepository.getCurrentUserId()
-        if (currentUserId == null) {
+        if (currentUserId.isNullOrBlank()) {
             _errorMessage.value = "User not logged in"
             return
         }
@@ -160,12 +188,19 @@ class UserProfileViewModel(
 
             when (val result = userRepository.updateUserRole(currentUserId, newRole.name)) {
                 is NetworkResult.Success -> {
-                    _userProfile.value = result.data
-                    _successMessage.value = "Role updated successfully!"
+                    // ✅ FIXED: Handle nullable UserModel data properly
+                    val updatedUser = result.data
+                    if (updatedUser != null) {
+                        _userProfile.value = updatedUser
+                        _successMessage.value = "Role updated successfully!"
+                    } else {
+                        _errorMessage.value = "Role update failed - no data returned"
+                    }
                     _isUpdatingProfile.value = false
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    val errorMsg = result.message ?: "Role update failed"
+                    _errorMessage.value = errorMsg
                     _isUpdatingProfile.value = false
                 }
                 is NetworkResult.Loading -> {
@@ -178,10 +213,10 @@ class UserProfileViewModel(
     // Get profile image URL (optimized)
     fun getProfileImageUrl(size: Int = 200): String {
         val imageUrl = _userProfile.value?.profileImageUrl
-        return if (imageUrl.isNullOrBlank()) {
-            "" // Return empty string for default avatar handling
-        } else {
+        return if (!imageUrl.isNullOrBlank()) {
             cloudinaryRepository.getOptimizedImageUrl(imageUrl, size, size)
+        } else {
+            "" // Return empty string for default avatar handling
         }
     }
 

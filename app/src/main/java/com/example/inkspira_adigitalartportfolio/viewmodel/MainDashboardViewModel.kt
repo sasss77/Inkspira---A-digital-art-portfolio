@@ -1,10 +1,11 @@
 package com.example.inkspira_adigitalartportfolio.viewmodel
 
+import UserModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.inkspira_adigitalartportfolio.controller.repository.AuthRepository
 import com.example.inkspira_adigitalartportfolio.controller.repository.UserRepository
-import com.example.inkspira_adigitalartportfolio.model.data.UserModel
+
 import com.example.inkspira_adigitalartportfolio.model.data.UserRole
 import com.example.inkspira_adigitalartportfolio.utils.NetworkResult
 import kotlinx.coroutines.flow.MutableStateFlow
