@@ -36,3 +36,5 @@ val GlassmorphicOverlay = Color(0x1AFFFFFF) // Glassmorphic effect
 val TextPrimary = Color(0xFFFFFFFF)         // Primary text on dark backgrounds
 val TextSecondary = Color(0xFFE5E7EB)       // Secondary text
 val TextMuted = Color(0xFF9CA3AF)           // Muted text
+
+val DividerColor = Color(0xFF374151)
