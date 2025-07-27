@@ -1,5 +1,6 @@
 package com.example.inkspira_adigitalartportfolio.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.inkspira_adigitalartportfolio.view.screens.ArtworkData
@@ -81,6 +82,7 @@ class DiscoverViewModel : ViewModel() {
                 snapshot.children.forEach { artworkSnapshot ->
                     try {
                         val artwork = artworkSnapshot.toArtworkDataSafe()
+                        Log.d("checkpoints",artwork!!.title);
                         artwork?.let {
                             val currentUserId = firebaseAuth.currentUser?.uid
                             if (it.userId != currentUserId) {

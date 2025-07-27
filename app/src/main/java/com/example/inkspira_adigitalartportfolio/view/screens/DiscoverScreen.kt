@@ -40,11 +40,10 @@ import com.example.inkspira_adigitalartportfolio.viewmodel.DiscoverViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscoverScreen(
-    onArtworkClick: (ArtworkData) -> Unit, // ✅ FIXED: HTML entity removed
-    onArtistClick: (ArtistData) -> Unit, // ✅ FIXED: HTML entity removed
+    onArtworkClick: (ArtworkData) -> Unit,
+    onArtistClick: (ArtistData) -> Unit,
     discoverViewModel: DiscoverViewModel = viewModel()
 ) {
-    // ✅ FIXED: Collect states from ViewModel
     val featuredArtworks by discoverViewModel.featuredArtworks.collectAsState()
     val trendingArtworks by discoverViewModel.trendingArtworks.collectAsState()
     val searchResults by discoverViewModel.searchResults.collectAsState()
@@ -59,16 +58,21 @@ fun DiscoverScreen(
     val isSearchMode by discoverViewModel.isSearchMode.collectAsState()
 
     var searchText by remember { mutableStateOf("") }
-    var showArtworkDetail by remember { mutableStateOf<ArtworkData?>(null) } // ✅ FIXED: Proper nullable type
+    var showArtworkDetail by remember { mutableStateOf<ArtworkData?>(null) }
+    var showArtistProfile by remember { mutableStateOf<ArtistData?>(null) }
+
+    // ✅ NEW: Track liked artworks locally for UI state
+    var likedArtworks by remember { mutableStateOf(setOf<String>()) }
+
     val keyboardController = LocalSoftwareKeyboardController.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // ✅ FIXED: Handle error messages with proper lambda syntax
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            discoverViewModel.clearErrorMessage()
-        }
+    LaunchedEffect(Unit) {
+        discoverViewModel.clearErrorMessage()
+        discoverViewModel.loadCategories()
+        discoverViewModel.loadDiscoverArtists()
+        discoverViewModel.loadFeaturedArtworks()
+        discoverViewModel.loadTrendingArtworks()
     }
 
     Scaffold(
@@ -102,21 +106,8 @@ fun DiscoverScreen(
                     containerColor = DarkNavy
                 )
             )
-        },
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                snackbar = { data -> // ✅ FIXED: Proper lambda syntax
-                    Snackbar(
-                        snackbarData = data,
-                        containerColor = ErrorColor,
-                        contentColor = Color.White,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            )
         }
-    ) { paddingValues -> // ✅ FIXED: Proper lambda syntax
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -130,7 +121,7 @@ fun DiscoverScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Search Bar
+                // ✅ UPDATED: Smaller Search Bar
                 SearchBar(
                     searchText = searchText,
                     onSearchTextChange = { searchText = it },
@@ -145,48 +136,61 @@ fun DiscoverScreen(
                     isSearching = isLoadingSearch
                 )
 
-                // Category Filter Chips (only show when not searching)
                 if (!isSearchMode) {
                     CategoryFilterChips(
                         categories = categories,
                         selectedCategory = selectedCategory,
-                        onCategorySelected = { category -> // ✅ FIXED: Proper lambda syntax
+                        onCategorySelected = { category ->
                             discoverViewModel.filterByCategory(category)
                         }
                     )
                 }
 
-                // Main Content
                 when {
-                    isLoadingFeatured && featuredArtworks.isEmpty() -> { // ✅ FIXED: HTML entity
+                    isLoadingFeatured && featuredArtworks.isEmpty() -> {
                         LoadingContent()
                     }
 
-                    isSearchMode -> { // ✅ FIXED: Proper arrow syntax
+                    isSearchMode -> {
                         SearchResultsContent(
                             searchResults = searchResults,
                             searchQuery = searchQuery,
                             isLoading = isLoadingSearch,
-                            onArtworkClick = onArtworkClick,
-                            onLikeClick = { artwork -> // ✅ FIXED: Proper lambda syntax
-                                discoverViewModel.toggleLikeArtwork(artwork.id, false)
+                            likedArtworks = likedArtworks,
+                            onArtworkClick = { artwork ->
+                                discoverViewModel.incrementViewCount(artwork.id)
+                                showArtworkDetail = artwork
+                            },
+                            onLikeClick = { artwork ->
+                                val isCurrentlyLiked = likedArtworks.contains(artwork.id)
+                                if (!isCurrentlyLiked) {
+                                    likedArtworks = likedArtworks + artwork.id
+                                    discoverViewModel.toggleLikeArtwork(artwork.id, false)
+                                }
                             }
                         )
                     }
 
-                    else -> { // ✅ FIXED: Proper arrow syntax
+                    else -> {
                         DiscoverMainContent(
                             featuredArtworks = featuredArtworks,
                             trendingArtworks = trendingArtworks,
                             discoverArtists = discoverArtists,
                             isRefreshing = isRefreshing,
-                            onArtworkClick = { artwork -> // ✅ FIXED: Proper lambda syntax
+                            likedArtworks = likedArtworks,
+                            onArtworkClick = { artwork ->
                                 discoverViewModel.incrementViewCount(artwork.id)
-                                onArtworkClick(artwork)
+                                showArtworkDetail = artwork
                             },
-                            onArtistClick = onArtistClick,
-                            onLikeClick = { artwork -> // ✅ FIXED: Proper lambda syntax
-                                discoverViewModel.toggleLikeArtwork(artwork.id, false)
+                            onArtistClick = { artist ->
+                                showArtistProfile = artist
+                            },
+                            onLikeClick = { artwork ->
+                                val isCurrentlyLiked = likedArtworks.contains(artwork.id)
+                                if (!isCurrentlyLiked) {
+                                    likedArtworks = likedArtworks + artwork.id
+                                    discoverViewModel.toggleLikeArtwork(artwork.id, false)
+                                }
                             },
                             onRefresh = { discoverViewModel.refreshData() }
                         )
@@ -195,46 +199,63 @@ fun DiscoverScreen(
             }
         }
 
-        // Artwork Detail Dialog
-        showArtworkDetail?.let { artwork -> // ✅ FIXED: Proper lambda syntax
+        // ✅ ENHANCED: Artwork Detail Dialog
+        showArtworkDetail?.let { artwork ->
             ArtworkDetailDialog(
                 artwork = artwork,
+                isLiked = likedArtworks.contains(artwork.id),
                 onDismiss = { showArtworkDetail = null },
                 onLike = {
-                    discoverViewModel.toggleLikeArtwork(artwork.id, false)
-                    showArtworkDetail = null
+                    val isCurrentlyLiked = likedArtworks.contains(artwork.id)
+                    if (!isCurrentlyLiked) {
+                        likedArtworks = likedArtworks + artwork.id
+                        discoverViewModel.toggleLikeArtwork(artwork.id, false)
+                    }
+                }
+            )
+        }
+
+        // ✅ NEW: Artist Profile Dialog
+        showArtistProfile?.let { artist ->
+            ArtistProfileDialog(
+                artist = artist,
+                onDismiss = { showArtistProfile = null },
+                onFollow = {
+                    // TODO: Implement follow functionality
+                    showArtistProfile = null
                 }
             )
         }
     }
 }
 
+// ✅ UPDATED: Smaller Search Bar (reduced height and padding)
 @Composable
 private fun SearchBar(
     searchText: String,
-    onSearchTextChange: (String) -> Unit, // ✅ FIXED: Proper arrow syntax
-    onSearch: () -> Unit, // ✅ FIXED: Proper arrow syntax
-    onClearSearch: () -> Unit, // ✅ FIXED: Proper arrow syntax
+    onSearchTextChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onClearSearch: () -> Unit,
     isSearching: Boolean
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp), // ✅ REDUCED: vertical padding from 16.dp to 8.dp
         colors = CardDefaults.cardColors(
             containerColor = DarkNavy.copy(alpha = 0.8f)
         ),
-        shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        shape = RoundedCornerShape(24.dp), // ✅ REDUCED: corner radius from 28.dp to 24.dp
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp) // ✅ REDUCED: elevation from 8.dp to 6.dp
     ) {
         OutlinedTextField(
             value = searchText,
             onValueChange = onSearchTextChange,
-            placeholder = { Text("Search artworks, artists, tags...", color = TextMuted) },
+            placeholder = { Text("Search artworks", color = TextMuted) },
             leadingIcon = {
                 if (isSearching) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(18.dp), // ✅ REDUCED: size from 20.dp to 18.dp
                         color = InkspiraPrimary,
                         strokeWidth = 2.dp
                     )
@@ -242,7 +263,8 @@ private fun SearchBar(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = InkspiraPrimary
+                        tint = InkspiraPrimary,
+                        modifier = Modifier.size(20.dp) // ✅ REDUCED: size from default to 20.dp
                     )
                 }
             },
@@ -252,7 +274,8 @@ private fun SearchBar(
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Clear search",
-                            tint = TextSecondary
+                            tint = TextSecondary,
+                            modifier = Modifier.size(18.dp) // ✅ REDUCED: size from default to 18.dp
                         )
                     }
                 }
@@ -267,173 +290,49 @@ private fun SearchBar(
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp), // ✅ REDUCED: padding from 16.dp to 12.dp
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent,
                 cursorColor = InkspiraPrimary,
                 focusedTextColor = MaterialTheme.colorScheme.onSurface,
                 unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-            )
+            ),
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp) // ✅ REDUCED: text size
         )
     }
 }
 
-@Composable
-private fun CategoryFilterChips(
-    categories: List<String>, // ✅ FIXED: Added proper generic type
-    selectedCategory: String,
-    onCategorySelected: (String) -> Unit // ✅ FIXED: Proper arrow syntax
-) {
-    LazyRow(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(vertical = 8.dp)
-    ) {
-        items(categories) { category -> // ✅ FIXED: Proper lambda syntax
-            FilterChip(
-                onClick = { onCategorySelected(category) },
-                label = {
-                    Text(
-                        text = category,
-                        fontSize = 14.sp,
-                        fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal
-                    )
-                },
-                selected = category == selectedCategory,
-                leadingIcon = if (category == selectedCategory) {
-                    { // ✅ FIXED: Proper lambda structure
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = Color.White
-                        )
-                    }
-                } else null,
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = InkspiraPrimary,
-                    selectedLabelColor = Color.White,
-                    containerColor = DarkNavy.copy(alpha = 0.6f),
-                    labelColor = TextSecondary
-                ),
-                border = FilterChipDefaults.filterChipBorder(
-                    enabled = true,
-                    selected = category == selectedCategory,
-                    borderColor = if (category == selectedCategory) InkspiraPrimary else TextMuted.copy(alpha = 0.3f),
-                    selectedBorderColor = InkspiraPrimary
-                )
-            )
-        }
-    }
-}
-
-@Composable
-private fun SearchResultsContent(
-    searchResults: List<ArtworkData>, // ✅ FIXED: Added proper generic type
-    searchQuery: String,
-    isLoading: Boolean,
-    onArtworkClick: (ArtworkData) -> Unit, // ✅ FIXED: Proper arrow syntax
-    onLikeClick: (ArtworkData) -> Unit // ✅ FIXED: Proper arrow syntax
-) {
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Search Results Header
-        Text(
-            text = if (searchResults.isEmpty() && !isLoading) { // ✅ FIXED: HTML entity
-                "No results found for \"$searchQuery\""
-            } else {
-                "${searchResults.size} results for \"$searchQuery\""
-            },
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextSecondary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-
-        if (searchResults.isEmpty() && !isLoading) { // ✅ FIXED: HTML entity
-            // Empty search results
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SearchOff,
-                        contentDescription = "No results",
-                        tint = TextMuted,
-                        modifier = Modifier.size(64.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "No artworks found",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    Text(
-                        text = "Try different keywords or browse categories",
-                        fontSize = 14.sp,
-                        color = TextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        } else {
-            // Search Results Grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(16.dp)
-            ) {
-                items(searchResults) { artwork -> // ✅ FIXED: Proper lambda syntax
-                    ArtworkGridItem(
-                        artwork = artwork,
-                        onClick = { onArtworkClick(artwork) },
-                        onLikeClick = { onLikeClick(artwork) }
-                    )
-                }
-            }
-        }
-    }
-}
+// ✅ UPDATED: Enhanced components with like functionality and click handling
 
 @Composable
 private fun DiscoverMainContent(
-    featuredArtworks: List<ArtworkData>, // ✅ FIXED: Added proper generic type
-    trendingArtworks: List<ArtworkData>, // ✅ FIXED: Added proper generic type
-    discoverArtists: List<ArtistData>, // ✅ FIXED: Added proper generic type
+    featuredArtworks: List<ArtworkData>,
+    trendingArtworks: List<ArtworkData>,
+    discoverArtists: List<ArtistData>,
     isRefreshing: Boolean,
-    onArtworkClick: (ArtworkData) -> Unit, // ✅ FIXED: Proper arrow syntax
-    onArtistClick: (ArtistData) -> Unit, // ✅ FIXED: Proper arrow syntax
-    onLikeClick: (ArtworkData) -> Unit, // ✅ FIXED: Proper arrow syntax
-    onRefresh: () -> Unit // ✅ FIXED: Proper arrow syntax
+    likedArtworks: Set<String>, // ✅ NEW: Track liked artworks
+    onArtworkClick: (ArtworkData) -> Unit,
+    onArtistClick: (ArtistData) -> Unit,
+    onLikeClick: (ArtworkData) -> Unit,
+    onRefresh: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
-        // Trending Section
         if (trendingArtworks.isNotEmpty()) {
             item {
                 TrendingSection(
                     trendingArtworks = trendingArtworks,
+                    likedArtworks = likedArtworks,
                     onArtworkClick = onArtworkClick,
                     onLikeClick = onLikeClick
                 )
             }
         }
 
-        // Artists Discovery Section
         if (discoverArtists.isNotEmpty()) {
             item {
                 ArtistsDiscoverySection(
@@ -443,10 +342,10 @@ private fun DiscoverMainContent(
             }
         }
 
-        // Featured Artworks Section
         item {
             FeaturedArtworksSection(
                 featuredArtworks = featuredArtworks,
+                likedArtworks = likedArtworks,
                 onArtworkClick = onArtworkClick,
                 onLikeClick = onLikeClick
             )
@@ -456,9 +355,10 @@ private fun DiscoverMainContent(
 
 @Composable
 private fun TrendingSection(
-    trendingArtworks: List<ArtworkData>, // ✅ FIXED: Added proper generic type
-    onArtworkClick: (ArtworkData) -> Unit, // ✅ FIXED: Proper arrow syntax
-    onLikeClick: (ArtworkData) -> Unit // ✅ FIXED: Proper arrow syntax
+    trendingArtworks: List<ArtworkData>,
+    likedArtworks: Set<String>, // ✅ NEW
+    onArtworkClick: (ArtworkData) -> Unit,
+    onLikeClick: (ArtworkData) -> Unit
 ) {
     Column {
         Row(
@@ -495,9 +395,10 @@ private fun TrendingSection(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
-            items(trendingArtworks.take(10)) { artwork -> // ✅ FIXED: Proper lambda syntax
+            items(trendingArtworks.take(10)) { artwork ->
                 TrendingArtworkCard(
                     artwork = artwork,
+                    isLiked = likedArtworks.contains(artwork.id), // ✅ NEW
                     onClick = { onArtworkClick(artwork) },
                     onLikeClick = { onLikeClick(artwork) }
                 )
@@ -507,55 +408,11 @@ private fun TrendingSection(
 }
 
 @Composable
-private fun ArtistsDiscoverySection(
-    artists: List<ArtistData>, // ✅ FIXED: Added proper generic type
-    onArtistClick: (ArtistData) -> Unit // ✅ FIXED: Proper arrow syntax
-) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Artists",
-                tint = InkspiraPrimary,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = "Discover Artists",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp)
-        ) {
-            items(artists.take(10)) { artist -> // ✅ FIXED: Proper lambda syntax
-                ArtistCard(
-                    artist = artist,
-                    onClick = { onArtistClick(artist) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun FeaturedArtworksSection(
-    featuredArtworks: List<ArtworkData>, // ✅ FIXED: Added proper generic type
-    onArtworkClick: (ArtworkData) -> Unit, // ✅ FIXED: Proper arrow syntax
-    onLikeClick: (ArtworkData) -> Unit // ✅ FIXED: Proper arrow syntax
+    featuredArtworks: List<ArtworkData>,
+    likedArtworks: Set<String>, // ✅ NEW
+    onArtworkClick: (ArtworkData) -> Unit,
+    onLikeClick: (ArtworkData) -> Unit
 ) {
     Column {
         Text(
@@ -578,9 +435,10 @@ private fun FeaturedArtworksSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             userScrollEnabled = false
         ) {
-            items(featuredArtworks.take(20)) { artwork -> // ✅ FIXED: Proper lambda syntax
+            items(featuredArtworks.take(20)) { artwork ->
                 ArtworkGridItem(
                     artwork = artwork,
+                    isLiked = likedArtworks.contains(artwork.id), // ✅ NEW
                     onClick = { onArtworkClick(artwork) },
                     onLikeClick = { onLikeClick(artwork) }
                 )
@@ -590,16 +448,98 @@ private fun FeaturedArtworksSection(
 }
 
 @Composable
+private fun SearchResultsContent(
+    searchResults: List<ArtworkData>,
+    searchQuery: String,
+    isLoading: Boolean,
+    likedArtworks: Set<String>, // ✅ NEW
+    onArtworkClick: (ArtworkData) -> Unit,
+    onLikeClick: (ArtworkData) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Text(
+            text = if (searchResults.isEmpty() && !isLoading) {
+                "No results found for \"$searchQuery\""
+            } else {
+                "${searchResults.size} results for \"$searchQuery\""
+            },
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = TextSecondary,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+
+        if (searchResults.isEmpty() && !isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SearchOff,
+                        contentDescription = "No results",
+                        tint = TextMuted,
+                        modifier = Modifier.size(64.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "No artworks found",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Try different keywords or browse categories",
+                        fontSize = 14.sp,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                items(searchResults) { artwork ->
+                    ArtworkGridItem(
+                        artwork = artwork,
+                        isLiked = likedArtworks.contains(artwork.id), // ✅ NEW
+                        onClick = { onArtworkClick(artwork) },
+                        onLikeClick = { onLikeClick(artwork) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ✅ UPDATED: Enhanced artwork cards with proper like functionality
+
+@Composable
 private fun TrendingArtworkCard(
     artwork: ArtworkData,
-    onClick: () -> Unit, // ✅ FIXED: Proper arrow syntax
-    onLikeClick: () -> Unit // ✅ FIXED: Proper arrow syntax
+    isLiked: Boolean, // ✅ NEW
+    onClick: () -> Unit,
+    onLikeClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .width(200.dp)
             .height(280.dp)
-            .clickable { onClick() },
+            .clickable { onClick() }, // ✅ WORKING CLICK
         colors = CardDefaults.cardColors(
             containerColor = DarkNavy.copy(alpha = 0.8f)
         ),
@@ -621,7 +561,6 @@ private fun TrendingArtworkCard(
                     contentScale = ContentScale.Crop
                 )
 
-                // Trending badge
                 Card(
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -653,17 +592,17 @@ private fun TrendingArtworkCard(
                     }
                 }
 
-                // Like button
+                // ✅ ENHANCED: Like button with visual feedback
                 IconButton(
-                    onClick = onLikeClick,
+                    onClick = { if (!isLiked) onLikeClick() }, // ✅ PREVENT MULTIPLE LIKES
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.FavoriteBorder,
+                        imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "Like",
-                        tint = Color.White
+                        tint = if (isLiked) Color.Red else Color.White // ✅ RED WHEN LIKED
                     )
                 }
             }
@@ -731,102 +670,17 @@ private fun TrendingArtworkCard(
 }
 
 @Composable
-private fun ArtistCard(
-    artist: ArtistData,
-    onClick: () -> Unit // ✅ FIXED: Proper arrow syntax
-) {
-    Card(
-        modifier = Modifier
-            .width(160.dp)
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = DarkNavy.copy(alpha = 0.8f)
-        ),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Profile Image
-            Box(
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(CircleShape)
-                    .background(InkspiraPrimary.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (artist.profileImageUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = artist.profileImageUrl,
-                        contentDescription = artist.displayName,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Text(
-                        text = artist.getProfileDisplayName().firstOrNull()?.uppercase() ?: "A",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = InkspiraPrimary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = artist.getProfileDisplayName(),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (artist.username.isNotEmpty()) {
-                Text(
-                    text = "@${artist.username}",
-                    fontSize = 12.sp,
-                    color = InkspiraPrimary,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = artist.getArtworkCountText(),
-                fontSize = 10.sp,
-                color = TextSecondary,
-                textAlign = TextAlign.Center
-            )
-
-            if (artist.followersCount > 0) { // ✅ FIXED: HTML entity
-                Text(
-                    text = artist.getFollowersText(),
-                    fontSize = 10.sp,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun ArtworkGridItem(
     artwork: ArtworkData,
-    onClick: () -> Unit, // ✅ FIXED: Proper arrow syntax
-    onLikeClick: () -> Unit // ✅ FIXED: Proper arrow syntax
+    isLiked: Boolean, // ✅ NEW
+    onClick: () -> Unit,
+    onLikeClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp)
-            .clickable { onClick() },
+            .clickable { onClick() }, // ✅ WORKING CLICK
         colors = CardDefaults.cardColors(
             containerColor = DarkNavy.copy(alpha = 0.8f)
         ),
@@ -843,7 +697,6 @@ private fun ArtworkGridItem(
                 contentScale = ContentScale.Crop
             )
 
-            // Gradient overlay
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -858,21 +711,20 @@ private fun ArtworkGridItem(
                     )
             )
 
-            // Like button
+            // ✅ ENHANCED: Like button with visual feedback
             IconButton(
-                onClick = onLikeClick,
+                onClick = { if (!isLiked) onLikeClick() }, // ✅ PREVENT MULTIPLE LIKES
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.FavoriteBorder,
+                    imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Like",
-                    tint = Color.White
+                    tint = if (isLiked) Color.Red else Color.White // ✅ RED WHEN LIKED
                 )
             }
 
-            // Artwork info
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -937,36 +789,97 @@ private fun ArtworkGridItem(
 }
 
 @Composable
-private fun LoadingContent() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+private fun ArtistCard(
+    artist: ArtistData,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(160.dp)
+            .clickable { onClick() }, // ✅ WORKING CLICK
+        colors = CardDefaults.cardColors(
+            containerColor = DarkNavy.copy(alpha = 0.8f)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(
+            modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            CircularProgressIndicator(
-                color = InkspiraPrimary,
-                strokeWidth = 3.dp,
-                modifier = Modifier.size(48.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(CircleShape)
+                    .background(InkspiraPrimary.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (artist.profileImageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = artist.profileImageUrl,
+                        contentDescription = artist.displayName,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = artist.getProfileDisplayName().firstOrNull()?.uppercase() ?: "A",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = InkspiraPrimary
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Discovering amazing artworks...",
-                color = TextSecondary,
-                fontSize = 16.sp
+                text = artist.getProfileDisplayName(),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+
+            if (artist.username.isNotEmpty()) {
+                Text(
+                    text = "@${artist.username}",
+                    fontSize = 12.sp,
+                    color = InkspiraPrimary,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = artist.getArtworkCountText(),
+                fontSize = 10.sp,
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+
+            if (artist.followersCount > 0) {
+                Text(
+                    text = artist.getFollowersText(),
+                    fontSize = 10.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
 
+// ✅ ENHANCED: Artwork Detail Dialog with like state
 @Composable
 private fun ArtworkDetailDialog(
     artwork: ArtworkData,
-    onDismiss: () -> Unit, // ✅ FIXED: Proper arrow syntax
-    onLike: () -> Unit // ✅ FIXED: Proper arrow syntax
+    isLiked: Boolean, // ✅ NEW
+    onDismiss: () -> Unit,
+    onLike: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1055,20 +968,40 @@ private fun ArtworkDetailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onLike) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = "Like",
-                        tint = InkspiraPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
+            // ✅ ENHANCED: Like button with visual feedback
+            if (!isLiked) {
+                TextButton(onClick = onLike) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FavoriteBorder,
+                            contentDescription = "Like",
+                            tint = InkspiraPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
 
-                    Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
 
-                    Text("Like", color = InkspiraPrimary)
+                        Text("Like", color = InkspiraPrimary)
+                    }
+                }
+            } else {
+                TextButton(onClick = {}) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Favorite,
+                            contentDescription = "Liked",
+                            tint = Color.Red,
+                            modifier = Modifier.size(18.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        Text("Liked", color = Color.Red)
+                    }
                 }
             }
         },
@@ -1080,4 +1013,258 @@ private fun ArtworkDetailDialog(
         containerColor = DarkNavy,
         shape = RoundedCornerShape(16.dp)
     )
+}
+
+// ✅ NEW: Artist Profile Dialog
+@Composable
+private fun ArtistProfileDialog(
+    artist: ArtistData,
+    onDismiss: () -> Unit,
+    onFollow: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(InkspiraPrimary.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (artist.profileImageUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = artist.profileImageUrl,
+                            contentDescription = artist.displayName,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(
+                            text = artist.getProfileDisplayName().firstOrNull()?.uppercase() ?: "A",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = InkspiraPrimary
+                        )
+                    }
+                }
+
+                Column {
+                    Text(
+                        text = artist.getProfileDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 18.sp
+                    )
+
+                    if (artist.username.isNotEmpty()) {
+                        Text(
+                            text = "@${artist.username}",
+                            color = InkspiraPrimary,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (artist.bio.isNotEmpty()) {
+                    Text(
+                        text = artist.bio,
+                        fontSize = 14.sp,
+                        color = TextSecondary,
+                        lineHeight = 20.sp
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = artist.artworkCount.toString(),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        Text(
+                            text = "Artworks",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = artist.followersCount.toString(),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        Text(
+                            text = "Followers",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onFollow,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = InkspiraPrimary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PersonAdd,
+                    contentDescription = "Follow",
+                    modifier = Modifier.size(18.dp)
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                Text("Follow", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = TextSecondary)
+            }
+        },
+        containerColor = DarkNavy,
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+// Keep all other existing components unchanged...
+@Composable
+private fun CategoryFilterChips(
+    categories: List<String>,
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 8.dp)
+    ) {
+        items(categories) { category ->
+            FilterChip(
+                onClick = { onCategorySelected(category) },
+                label = {
+                    Text(
+                        text = category,
+                        fontSize = 14.sp,
+                        fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal
+                    )
+                },
+                selected = category == selectedCategory,
+                leadingIcon = if (category == selectedCategory) {
+                    {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = Color.White
+                        )
+                    }
+                } else null,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = InkspiraPrimary,
+                    selectedLabelColor = Color.White,
+                    containerColor = DarkNavy.copy(alpha = 0.6f),
+                    labelColor = TextSecondary
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = category == selectedCategory,
+                    borderColor = if (category == selectedCategory) InkspiraPrimary else TextMuted.copy(alpha = 0.3f),
+                    selectedBorderColor = InkspiraPrimary
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun ArtistsDiscoverySection(
+    artists: List<ArtistData>,
+    onArtistClick: (ArtistData) -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = "Artists",
+                tint = InkspiraPrimary,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = "Discover Artists",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp)
+        ) {
+            items(artists.take(10)) { artist ->
+                ArtistCard(
+                    artist = artist,
+                    onClick = { onArtistClick(artist) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingContent() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator(
+                color = InkspiraPrimary,
+                strokeWidth = 3.dp,
+                modifier = Modifier.size(48.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Discovering amazing artworks...",
+                color = TextSecondary,
+                fontSize = 16.sp
+            )
+        }
+    }
 }

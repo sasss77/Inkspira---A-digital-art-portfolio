@@ -29,9 +29,11 @@ import com.example.inkspira_adigitalartportfolio.view.screens.GalleryScreen
 import com.example.inkspira_adigitalartportfolio.view.screens.ProfileScreen
 import com.example.inkspira_adigitalartportfolio.view.screens.UploadScreen
 import com.example.inkspira_adigitalartportfolio.viewmodel.AuthViewModel
+import com.example.inkspira_adigitalartportfolio.model.data.UserRole
+import com.example.inkspira_adigitalartportfolio.utils.NetworkResult
+import kotlinx.coroutines.flow.first
 
 class DashboardActivity : ComponentActivity() {
-
     private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +48,7 @@ class DashboardActivity : ComponentActivity() {
         setContent {
             InkspiraDarkTheme {
                 MainScreen(
+                    authViewModel = authViewModel,
                     onLogout = {
                         authViewModel.logoutUser()
                         navigateToLogin()
@@ -61,114 +64,243 @@ class DashboardActivity : ComponentActivity() {
     }
 }
 
-// ✅ FIXED: Bottom Navigation Items (removed Community screen)
+// ✅ ENHANCED: Bottom Navigation Items with role-based access
 sealed class BottomNavItem(
     val route: String,
     val title: String,
     val icon: ImageVector,
-    val selectedIcon: ImageVector = icon
+    val selectedIcon: ImageVector = icon,
+    val allowedRoles: List<UserRole> // ✅ NEW: Define which roles can access each item
 ) {
     object Gallery : BottomNavItem(
         route = "gallery",
         title = "Gallery",
         icon = Icons.Default.PhotoLibrary,
-        selectedIcon = Icons.Filled.PhotoLibrary
+        selectedIcon = Icons.Filled.PhotoLibrary,
+        allowedRoles = listOf(UserRole.ARTIST, UserRole.BOTH)
     )
 
     object Discover : BottomNavItem(
         route = "discover",
         title = "Discover",
         icon = Icons.Default.Explore,
-        selectedIcon = Icons.Filled.Explore
+        selectedIcon = Icons.Filled.Explore,
+        allowedRoles = listOf(UserRole.VIEWER, UserRole.BOTH)
     )
 
     object Upload : BottomNavItem(
         route = "upload",
         title = "Upload",
-        icon = Icons.Default.Add
+        icon = Icons.Default.Add,
+        allowedRoles = listOf(UserRole.ARTIST, UserRole.BOTH)
     )
 
     object Profile : BottomNavItem(
         route = "profile",
         title = "Profile",
         icon = Icons.Default.Person,
-        selectedIcon = Icons.Filled.Person
+        selectedIcon = Icons.Filled.Person,
+        allowedRoles = listOf(UserRole.ARTIST, UserRole.VIEWER, UserRole.BOTH) // All users can access profile
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainScreen(onLogout: () -> Unit) {
+private fun MainScreen(
+    authViewModel: AuthViewModel,
+    onLogout: () -> Unit
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // ✅ FIXED: Only 4 navigation items
-    val bottomNavItems = listOf(
-        BottomNavItem.Gallery,
-        BottomNavItem.Discover,
-        BottomNavItem.Upload,
-        BottomNavItem.Profile
-    )
+    // ✅ NEW: State for user role and loading
+    var userRole by remember { mutableStateOf<UserRole?>(null) }
+    var isLoadingRole by remember { mutableStateOf(true) }
+    var roleError by remember { mutableStateOf<String?>(null) }
+
+    // ✅ NEW: Fetch user role when component loads
+    LaunchedEffect(Unit) {
+        try {
+            authViewModel.getCurrentUserData().collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        val userData = result.data as? Map<*, *>
+                        val roleString = userData?.get("role") as? String
+                        userRole = when (roleString) {
+                            "ARTIST" -> UserRole.ARTIST
+                            "VIEWER" -> UserRole.VIEWER
+                            "BOTH" -> UserRole.BOTH
+                            else -> UserRole.VIEWER // Default fallback
+                        }
+                        isLoadingRole = false
+                    }
+                    is NetworkResult.Error -> {
+                        roleError = result.message
+                        userRole = UserRole.VIEWER // Default fallback
+                        isLoadingRole = false
+                    }
+                    is NetworkResult.Loading -> {
+                        isLoadingRole = true
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            roleError = "Failed to load user data"
+            userRole = UserRole.VIEWER // Default fallback
+            isLoadingRole = false
+        }
+    }
+
+    // ✅ NEW: Filter navigation items based on user role
+    val allowedNavItems = remember(userRole) {
+        if (userRole == null) {
+            emptyList()
+        } else {
+            listOf(
+                BottomNavItem.Gallery,
+                BottomNavItem.Discover,
+                BottomNavItem.Upload,
+                BottomNavItem.Profile
+            ).filter { item ->
+                item.allowedRoles.contains(userRole)
+            }
+        }
+    }
+
+    // ✅ NEW: Determine start destination based on user role
+    val startDestination = remember(userRole) {
+        when (userRole) {
+            UserRole.ARTIST, UserRole.BOTH -> BottomNavItem.Gallery.route
+            UserRole.VIEWER -> BottomNavItem.Discover.route
+            null -> BottomNavItem.Profile.route // Fallback
+        }
+    }
+
+    // ✅ NEW: Show loading screen while fetching user role
+    if (isLoadingRole) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                CircularProgressIndicator(
+                    color = InkspiraPrimary,
+                    strokeWidth = 3.dp
+                )
+                Text(
+                    text = "Loading your dashboard...",
+                    color = TextSecondary
+                )
+            }
+        }
+        return
+    }
+
+    // ✅ NEW: Show error if role loading failed
+    if (roleError != null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Error,
+                    contentDescription = "Error",
+                    tint = ErrorColor,
+                    modifier = Modifier.size(48.dp)
+                )
+                Text(
+                    text = "Failed to load dashboard",
+                    color = ErrorColor
+                )
+                Text(
+                    text = roleError ?: "Unknown error",
+                    color = TextSecondary
+                )
+                Button(
+                    onClick = onLogout,
+                    colors = ButtonDefaults.buttonColors(containerColor = InkspiraPrimary)
+                ) {
+                    Text("Back to Login")
+                }
+            }
+        }
+        return
+    }
 
     Scaffold(
         bottomBar = {
-            // Only show bottom navigation on main screens
-            if (currentDestination?.route in bottomNavItems.map { it.route }) {
+            // Only show bottom navigation on main screens and if user has allowed items
+            if (currentDestination?.route in allowedNavItems.map { it.route } && allowedNavItems.isNotEmpty()) {
                 InkspiraBottomNavigation(
                     navController = navController,
-                    items = bottomNavItems,
-                    currentDestination = currentDestination
+                    items = allowedNavItems,
+                    currentDestination = currentDestination,
+                    userRole = userRole
                 )
             }
         }
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = BottomNavItem.Gallery.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(paddingValues)
         ) {
-            // ✅ FIXED: Gallery Screen with proper navigation
-            composable(BottomNavItem.Gallery.route) {
-                GalleryScreen(
-                    onNavigateToUpload = {
-                        navController.navigate(BottomNavItem.Upload.route)
-                    }
-                )
-            }
+            // ✅ ENHANCED: Conditional composables based on user role
 
-
-            composable(BottomNavItem.Discover.route) {
-                DiscoverScreen(
-                    onArtworkClick = { artwork ->
-                        // Handle artwork click - for now just log
-                        println("Artwork clicked: ${artwork.title}")
-                    },
-                    onArtistClick = { artist ->
-                        // Handle artist click - for now just log
-                        println("Artist clicked: ${artist.displayName}")
-                    }
-                )
-            }
-
-
-            // ✅ FIXED: Upload Screen with proper navigation and context
-            composable(BottomNavItem.Upload.route) {
-                UploadScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    },
-                    onUploadSuccess = {
-                        // Navigate back to gallery after successful upload
-                        navController.navigate(BottomNavItem.Gallery.route) {
-                            popUpTo(navController.graph.findStartDestination().id)
-                            launchSingleTop = true
+            // Gallery Screen - Only for ARTIST and BOTH
+            if (userRole == UserRole.ARTIST || userRole == UserRole.BOTH) {
+                composable(BottomNavItem.Gallery.route) {
+                    GalleryScreen(
+                        onNavigateToUpload = {
+                            if (userRole == UserRole.ARTIST || userRole == UserRole.BOTH) {
+                                navController.navigate(BottomNavItem.Upload.route)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
 
-            // ✅ FIXED: Profile Screen with logout callback
+            // Discover Screen - Only for VIEWER and BOTH
+            if (userRole == UserRole.VIEWER || userRole == UserRole.BOTH) {
+                composable(BottomNavItem.Discover.route) {
+                    DiscoverScreen(
+                        onArtworkClick = { artwork ->
+                            println("Artwork clicked: ${artwork.title}")
+                        },
+                        onArtistClick = { artist ->
+                            println("Artist clicked: ${artist.displayName}")
+                        }
+                    )
+                }
+            }
+
+            // Upload Screen - Only for ARTIST and BOTH
+            if (userRole == UserRole.ARTIST || userRole == UserRole.BOTH) {
+                composable(BottomNavItem.Upload.route) {
+                    UploadScreen(
+                        onNavigateBack = {
+                            navController.popBackStack()
+                        },
+                        onUploadSuccess = {
+                            // Navigate back to gallery after successful upload
+                            navController.navigate(BottomNavItem.Gallery.route) {
+                                popUpTo(navController.graph.findStartDestination().id)
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Profile Screen - Available for all users
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
                     onLogout = onLogout
@@ -182,7 +314,8 @@ private fun MainScreen(onLogout: () -> Unit) {
 private fun InkspiraBottomNavigation(
     navController: androidx.navigation.NavController,
     items: List<BottomNavItem>,
-    currentDestination: androidx.navigation.NavDestination?
+    currentDestination: androidx.navigation.NavDestination?,
+    userRole: UserRole?
 ) {
     NavigationBar(
         containerColor = DarkNavy,
@@ -210,21 +343,19 @@ private fun InkspiraBottomNavigation(
                 },
                 selected = selected,
                 onClick = {
-                    if (item.route == BottomNavItem.Upload.route) {
-                        // Special handling for upload - always navigate
-                        navController.navigate(item.route)
-                    } else {
-                        navController.navigate(item.route) {
-                            // Pop up to the start destination of the graph to
-                            // avoid building up a large stack of destinations
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                    // ✅ ENHANCED: Role-based navigation with validation
+                    if (userRole != null && item.allowedRoles.contains(userRole)) {
+                        if (item.route == BottomNavItem.Upload.route) {
+                            // Special handling for upload - always navigate
+                            navController.navigate(item.route)
+                        } else {
+                            navController.navigate(item.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            // Avoid multiple copies of the same destination when
-                            // reselecting the same item
-                            launchSingleTop = true
-                            // Restore state when reselecting a previously selected item
-                            restoreState = true
                         }
                     }
                 },

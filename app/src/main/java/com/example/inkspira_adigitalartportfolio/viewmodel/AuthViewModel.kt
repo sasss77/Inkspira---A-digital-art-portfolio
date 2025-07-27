@@ -155,6 +155,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    var _artist = false;
+
+
     // ✅ IMPROVED: Login with TIMEOUT PROTECTION
     fun loginUser(email: String, password: String) {
         viewModelScope.launch {
