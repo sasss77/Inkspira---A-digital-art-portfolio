@@ -103,13 +103,7 @@ fun ArtworkDetailView(
                     modifier = Modifier.padding(16.dp)
                 )
 
-                // Tags Section
-                if (artwork.tags.isNotEmpty()) {
-                    TagsSection(
-                        tags = artwork.tags,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
+
 
                 // Spacer for bottom navigation
                 Spacer(modifier = Modifier.height(24.dp))
@@ -174,12 +168,7 @@ private fun ArtworkInfoCard(
                     tint = TextSecondary,
                     modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Uploaded ${artwork.getRelativeTime()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
+
             }
 
             // Visibility Status
