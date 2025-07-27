@@ -118,26 +118,7 @@ fun ArtworkCard(
                 )
             }
 
-            // Tags Preview (if available)
-            if (artwork.tags.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(12.dp)
-                        .background(
-                            color = InkspiraTertiary.copy(alpha = 0.8f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = artwork.tags.first(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
+
         }
     }
 }

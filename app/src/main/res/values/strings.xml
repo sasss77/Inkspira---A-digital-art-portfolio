@@ -10,4 +10,8 @@
     <string name="title_activity_splash">SplashActivity</string>
     <string name="title_activity_update_user">UpdateUserActivity</string>
     <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_onboarding">OnboardingActivity</string>
+    <string name="title_activity_register">RegisterActivity</string>
+    <string name="title_activity_forget_password">ForgetPasswordActivity</string>
+    <string name="title_activity_dashboard">DashboardActivity</string>
 </resources>

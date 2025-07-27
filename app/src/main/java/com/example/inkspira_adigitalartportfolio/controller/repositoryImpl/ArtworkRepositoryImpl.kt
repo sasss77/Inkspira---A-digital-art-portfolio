@@ -1,282 +1,447 @@
-package com.example.inkspira_adigitalartportfolio.controller.repositoryImpl
+package com.example.inkspira_adigitalartportfolio.repository
 
-import com.example.inkspira_adigitalartportfolio.controller.remote.FirebaseRealtimeService
-import com.example.inkspira_adigitalartportfolio.controller.repository.ArtworkRepository
-import com.example.inkspira_adigitalartportfolio.controller.repository.UserRepository
-import com.example.inkspira_adigitalartportfolio.controller.repository.CloudinaryRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.*
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.example.inkspira_adigitalartportfolio.model.data.ArtworkModel
-import com.example.inkspira_adigitalartportfolio.utils.Constants
 import com.example.inkspira_adigitalartportfolio.utils.NetworkResult
+import com.example.inkspira_adigitalartportfolio.view.screens.ArtworkData
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ArtworkRepositoryImpl(
-    private val dbService: FirebaseRealtimeService,
-    private val userRepository: UserRepository,
-    private val cloudinaryRepository: CloudinaryRepository
-) : ArtworkRepository {
+@Singleton
+class ArtworkRepositoryImpl @Inject constructor() : ArtworkRepository {
 
-    private val artworksNode = Constants.ARTWORKS_NODE
+    private val firebaseAuth = FirebaseAuth.getInstance()
+    private val database = FirebaseDatabase.getInstance()
+    private val artworksRef = database.getReference("artworks")
+    private val usersRef = database.getReference("users")
 
-    override suspend fun createArtwork(artwork: ArtworkModel): NetworkResult<ArtworkModel> {
-        // ✅ Validate artwork before creation
-        if (!artwork.isValid()) {
-            return NetworkResult.Error("Invalid artwork data: missing required fields")
-        }
+    // ✅ Get user's personal artworks (Gallery Screen)
+    override suspend fun getUserArtworks(): NetworkResult<List<ArtworkData>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val userId = firebaseAuth.currentUser?.uid
+                    ?: return@withContext NetworkResult.Error("User not authenticated")
 
-        // ✅ Generate artwork ID if empty
-        val artworkId = artwork.id.ifEmpty {
-            "artwork_${System.currentTimeMillis()}_${(1000..9999).random()}"
-        }
+                val snapshot = artworksRef
+                    .orderByChild("artistId")
+                    .equalTo(userId)
+                    .get()
+                    .await()
 
-        // ✅ Enrich artwork with complete user data
-        val enrichedArtwork = enrichArtworkWithUserData(artwork.copy(id = artworkId))
+                val artworksList = mutableListOf<ArtworkData>()
 
-        return when (val result = dbService.saveData(artworksNode, artworkId, enrichedArtwork.toMap())) {
-            is NetworkResult.Success -> NetworkResult.Success(enrichedArtwork)
-            is NetworkResult.Error -> NetworkResult.Error("Failed to create artwork: ${result.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
-        }
-    }
-
-    override suspend fun getArtworkById(artworkId: String): NetworkResult<ArtworkModel?> {
-        if (artworkId.isBlank()) {
-            return NetworkResult.Error("Artwork ID cannot be empty")
-        }
-
-        return when (val result = dbService.getData(artworksNode, artworkId, ArtworkModel::class.java)) {
-            is NetworkResult.Success -> {
-                val artwork = result.data
-                if (artwork != null) {
-                    // ✅ Enrich with user data before returning
-                    val enrichedArtwork = enrichArtworkWithUserData(artwork)
-                    NetworkResult.Success(enrichedArtwork)
-                } else {
-                    NetworkResult.Success(null)
+                snapshot.children.forEach { artworkSnapshot ->
+                    try {
+                        val artworkModel = artworkSnapshot.getValue(ArtworkModel::class.java)
+                        artworkModel?.let { model ->
+                            val artworkData = model.toArtworkData()
+                            artworksList.add(artworkData)
+                        }
+                    } catch (e: Exception) {
+                        // Log individual conversion errors but continue processing
+                        println("Error converting user artwork ${artworkSnapshot.key}: ${e.message}")
+                    }
                 }
+
+                val sortedArtworks = artworksList.sortedByDescending { it.createdAt }
+                NetworkResult.Success(sortedArtworks)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to load user artworks: ${e.message}")
             }
-            is NetworkResult.Error -> NetworkResult.Error("Failed to retrieve artwork: ${result.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
         }
     }
 
-    override suspend fun updateArtwork(artwork: ArtworkModel): NetworkResult<ArtworkModel> {
-        // ✅ Validate artwork data
-        if (!artwork.isValid()) {
-            return NetworkResult.Error("Invalid artwork data: missing required fields")
-        }
+    // ✅ Get public artworks for discovery (Discover Screen)
+    override suspend fun getPublicArtworks(limit: Int): NetworkResult<List<ArtworkData>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val currentUserId = firebaseAuth.currentUser?.uid
 
-        if (artwork.id.isBlank()) {
-            return NetworkResult.Error("Invalid artwork ID")
-        }
+                val snapshot = artworksRef
+                    .orderByChild("isPublic")
+                    .equalTo(true)
+                    .limitToLast(limit)
+                    .get()
+                    .await()
 
-        // ✅ Update timestamp
-        val updatedArtwork = artwork.copy(updatedAt = System.currentTimeMillis())
+                val artworksList = mutableListOf<ArtworkData>()
 
-        return when (val result = dbService.updateData(artworksNode, artwork.id, updatedArtwork.toMap())) {
-            is NetworkResult.Success -> NetworkResult.Success(updatedArtwork)
-            is NetworkResult.Error -> NetworkResult.Error("Failed to update artwork: ${result.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
+                snapshot.children.forEach { artworkSnapshot ->
+                    try {
+                        val artworkModel = artworkSnapshot.getValue(ArtworkModel::class.java)
+                        artworkModel?.let { model ->
+                            // Exclude current user's artworks from discover feed
+                            if (model.artistId != currentUserId) {
+                                val artworkData = model.toArtworkData()
+                                artworksList.add(artworkData)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("Error converting public artwork ${artworkSnapshot.key}: ${e.message}")
+                    }
+                }
+
+                val sortedArtworks = artworksList.sortedByDescending { it.createdAt }
+                NetworkResult.Success(sortedArtworks)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to load public artworks: ${e.message}")
+            }
         }
     }
 
+    // ✅ Search artworks with multi-term support
+    override suspend fun searchArtworks(query: String): NetworkResult<List<ArtworkData>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (query.isBlank()) {
+                    return@withContext NetworkResult.Success(emptyList())
+                }
+
+                val currentUserId = firebaseAuth.currentUser?.uid
+                val searchTerms = query.lowercase()
+                    .split(" ")
+                    .filter { it.isNotBlank() && it.length >= 2 } // Minimum 2 characters per term
+
+                if (searchTerms.isEmpty()) {
+                    return@withContext NetworkResult.Success(emptyList())
+                }
+
+                val snapshot = artworksRef
+                    .orderByChild("isPublic")
+                    .equalTo(true)
+                    .get()
+                    .await()
+
+                val searchResults = mutableListOf<Pair<ArtworkData, Int>>() // Pair of artwork and relevance score
+
+                snapshot.children.forEach { artworkSnapshot ->
+                    try {
+                        val artworkModel = artworkSnapshot.getValue(ArtworkModel::class.java)
+                        artworkModel?.let { model ->
+                            if (model.artistId != currentUserId) {
+                                // Create searchable text from multiple fields
+                                val searchableText = buildString {
+                                    append(model.title.lowercase())
+                                    append(" ")
+                                    append(model.description.lowercase())
+                                    append(" ")
+
+                                }
+
+                                // Calculate relevance score
+                                val relevanceScore = searchTerms.count { term ->
+                                    searchableText.contains(term)
+                                }
+
+                                if (relevanceScore > 0) {
+                                    val artworkData = model.toArtworkData()
+                                    searchResults.add(artworkData to relevanceScore)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("Error in search for ${artworkSnapshot.key}: ${e.message}")
+                    }
+                }
+
+                // Sort by relevance score (descending) then by creation date (descending)
+                val sortedResults = searchResults
+                    .sortedWith(
+                        compareByDescending<Pair<ArtworkData, Int>> { it.second }
+                            .thenByDescending { it.first.createdAt }
+                    )
+                    .map { it.first }
+
+                NetworkResult.Success(sortedResults)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Search failed: ${e.message}")
+            }
+        }
+    }
+
+    //  Get trending artworks (last 7 days, sorted by engagement)
+    override suspend fun getTrendingArtworks(limit: Int): NetworkResult<List<ArtworkData>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val currentUserId = firebaseAuth.currentUser?.uid
+                val sevenDaysAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
+
+                val snapshot = artworksRef
+                    .orderByChild("isPublic")
+                    .equalTo(true)
+                    .get()
+                    .await()
+
+                val trendingList = mutableListOf<ArtworkData>()
+
+                snapshot.children.forEach { artworkSnapshot ->
+                    try {
+                        val artworkModel = artworkSnapshot.getValue(ArtworkModel::class.java)
+                        artworkModel?.let { model ->
+                            // Only include recent artworks from other users
+                            if (model.artistId != currentUserId && model.uploadedAt >= sevenDaysAgo) {
+                                val artworkData = model.toArtworkData()
+                                trendingList.add(artworkData)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("Error converting trending artwork ${artworkSnapshot.key}: ${e.message}")
+                    }
+                }
+
+                // Sort by engagement score (likes + views * 0.1) descending
+                val sortedTrending = trendingList
+                    .sortedByDescending { artwork ->
+                        artwork.likesCount + (artwork.viewsCount * 0.1).toInt()
+                    }
+                    .take(limit)
+
+                NetworkResult.Success(sortedTrending)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to load trending artworks: ${e.message}")
+            }
+        }
+    }
+
+    // ✅ Filter artworks by category
+    override suspend fun getArtworksByCategory(category: String): NetworkResult<List<ArtworkData>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (category.isBlank() || category.equals("All", ignoreCase = true)) {
+                    return@withContext getPublicArtworks()
+                }
+
+                val currentUserId = firebaseAuth.currentUser?.uid
+
+                val snapshot = artworksRef
+                    .orderByChild("isPublic")
+                    .equalTo(true)
+                    .get()
+                    .await()
+
+                val filteredList = mutableListOf<ArtworkData>()
+
+                snapshot.children.forEach { artworkSnapshot ->
+                    try {
+                        val artworkModel = artworkSnapshot.getValue(ArtworkModel::class.java)
+                        artworkModel?.let { model ->
+                            if (model.artistId != currentUserId
+                               ) {
+                                val artworkData = model.toArtworkData()
+                                filteredList.add(artworkData)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("Error filtering artwork ${artworkSnapshot.key}: ${e.message}")
+                    }
+                }
+
+                val sortedFiltered = filteredList.sortedByDescending { it.createdAt }
+                NetworkResult.Success(sortedFiltered)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to filter artworks by category: ${e.message}")
+            }
+        }
+    }
+
+    // ✅ Get available categories from existing artworks
+    override suspend fun getCategories(): NetworkResult<List<String>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val snapshot = artworksRef
+                    .orderByChild("isPublic")
+                    .equalTo(true)
+                    .get()
+                    .await()
+
+                val categoriesSet = mutableSetOf<String>()
+
+
+                val sortedCategories = listOf("All") + categoriesSet.sorted()
+                NetworkResult.Success(sortedCategories)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to load categories: ${e.message}")
+            }
+        }
+    }
+
+    // ✅ Save new artwork
+    override suspend fun saveArtwork(artworkModel: ArtworkModel): NetworkResult<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val userId = firebaseAuth.currentUser?.uid
+                    ?: return@withContext NetworkResult.Error("User not authenticated")
+
+                // Ensure artwork has proper user ID
+                val updatedArtwork = artworkModel.copy(
+                    artistId = userId,
+                    uploadedAt = if (artworkModel.uploadedAt == 0L) System.currentTimeMillis() else artworkModel.uploadedAt
+
+                )
+
+                // Save artwork to database
+                artworksRef.child(updatedArtwork.id).setValue(updatedArtwork).await()
+
+                // Update user's artwork count
+                updateUserArtworkCount(userId, 1)
+
+                NetworkResult.Success(true)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to save artwork: ${e.message}")
+            }
+        }
+    }
+
+    // ✅ Update existing artwork
+    override suspend fun updateArtwork(artworkModel: ArtworkModel): NetworkResult<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val userId = firebaseAuth.currentUser?.uid
+                    ?: return@withContext NetworkResult.Error("User not authenticated")
+
+                // Verify ownership
+                val existingSnapshot = artworksRef.child(artworkModel.id).get().await()
+                val existingArtwork = existingSnapshot.getValue(ArtworkModel::class.java)
+
+                if (existingArtwork?.artistId != userId) {
+                    return@withContext NetworkResult.Error("Unauthorized: Cannot update artwork")
+                }
+
+
+
+
+                NetworkResult.Success(true)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to update artwork: ${e.message}")
+            }
+        }
+    }
+
+    // ✅ Delete artwork
     override suspend fun deleteArtwork(artworkId: String): NetworkResult<Boolean> {
-        if (artworkId.isBlank()) {
-            return NetworkResult.Error("Artwork ID cannot be empty")
-        }
+        return withContext(Dispatchers.IO) {
+            try {
+                val userId = firebaseAuth.currentUser?.uid
+                    ?: return@withContext NetworkResult.Error("User not authenticated")
 
-        return when (val result = dbService.deleteData(artworksNode, artworkId)) {
-            is NetworkResult.Success -> NetworkResult.Success(true)
-            is NetworkResult.Error -> NetworkResult.Error("Failed to delete artwork: ${result.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
-        }
-    }
+                // Verify ownership before deletion
+                val artworkSnapshot = artworksRef.child(artworkId).get().await()
+                val artwork = artworkSnapshot.getValue(ArtworkModel::class.java)
 
-    override suspend fun getArtworksByArtist(artistId: String): NetworkResult<List<ArtworkModel>> {
-        if (artistId.isBlank()) {
-            return NetworkResult.Error("Artist ID cannot be empty")
-        }
-
-        return when (val result = dbService.queryData(artworksNode, "artistId", artistId, ArtworkModel::class.java)) {
-            is NetworkResult.Success -> {
-                val artworks = result.data ?: emptyList()
-                // ✅ Enrich all artworks with user data and sort by date
-                val enrichedArtworks = artworks.map { enrichArtworkWithUserData(it) }
-                    .sortedByDescending { it.uploadedAt }
-                NetworkResult.Success(enrichedArtworks)
-            }
-            is NetworkResult.Error -> NetworkResult.Error("Failed to retrieve artist artworks: ${result.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
-        }
-    }
-
-    override suspend fun getAllPublicArtworks(): NetworkResult<List<ArtworkModel>> {
-        // ✅ CRITICAL FIX: Use boolean true instead of string "true"
-        return when (val result = dbService.queryData(artworksNode, "isPublic", "true", ArtworkModel::class.java)) {
-            is NetworkResult.Success -> {
-                val artworks = result.data ?: emptyList()
-                // ✅ Enrich all artworks with user data and sort by date
-                val enrichedArtworks = artworks.map { enrichArtworkWithUserData(it) }
-                    .sortedByDescending { it.uploadedAt }
-                NetworkResult.Success(enrichedArtworks)
-            }
-            is NetworkResult.Error -> NetworkResult.Error("Failed to retrieve public artworks: ${result.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
-        }
-    }
-
-    override suspend fun searchArtworks(query: String): NetworkResult<List<ArtworkModel>> {
-        if (query.isBlank()) {
-            return NetworkResult.Success(emptyList())
-        }
-
-        // ✅ Enhanced search with enriched data
-        return when (val result = getAllPublicArtworks()) {
-            is NetworkResult.Success -> {
-                val filteredArtworks = result.data?.filter { artwork ->
-                    artwork.title.contains(query, ignoreCase = true) ||
-                            artwork.description.contains(query, ignoreCase = true) ||
-                            artwork.tags.any { tag -> tag.contains(query, ignoreCase = true) } ||
-                            artwork.artistUsername.contains(query, ignoreCase = true)
-                } ?: emptyList()
-
-                NetworkResult.Success(filteredArtworks)
-            }
-            is NetworkResult.Error -> NetworkResult.Error("Failed to search artworks: ${result.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
-        }
-    }
-
-    override suspend fun updateArtworkVisibility(artworkId: String, isPublic: Boolean): NetworkResult<ArtworkModel> {
-        if (artworkId.isBlank()) {
-            return NetworkResult.Error("Artwork ID cannot be empty")
-        }
-
-        val updates = mapOf(
-            "isPublic" to isPublic,
-            "updatedAt" to System.currentTimeMillis()
-        )
-
-        return when (val updateResult = dbService.updateData(artworksNode, artworkId, updates)) {
-            is NetworkResult.Success -> {
-                // ✅ Properly handle nullable return type
-                when (val artworkResult = getArtworkById(artworkId)) {
-                    is NetworkResult.Success -> {
-                        artworkResult.data?.let { artwork ->
-                            NetworkResult.Success(artwork.copy(isPublic = isPublic))
-                        } ?: NetworkResult.Error("Artwork not found after visibility update")
-                    }
-                    is NetworkResult.Error -> NetworkResult.Error("Failed to retrieve updated artwork: ${artworkResult.message}")
-                    is NetworkResult.Loading -> NetworkResult.Loading()
+                if (artwork?.artistId != userId) {
+                    return@withContext NetworkResult.Error("Unauthorized: Cannot delete artwork")
                 }
+
+                // Delete artwork
+                artworksRef.child(artworkId).removeValue().await()
+
+                // Update user's artwork count
+                updateUserArtworkCount(userId, -1)
+
+                NetworkResult.Success(true)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to delete artwork: ${e.message}")
             }
-            is NetworkResult.Error -> NetworkResult.Error("Failed to update artwork visibility: ${updateResult.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
         }
     }
 
-    // ✅ Get artworks by tag
-    suspend fun getArtworksByTag(tag: String): NetworkResult<List<ArtworkModel>> {
-        if (tag.isBlank()) {
-            return NetworkResult.Error("Tag cannot be empty")
-        }
+    // ✅ Update artwork likes count
+    override suspend fun updateArtworkLikes(artworkId: String, newLikesCount: Int): NetworkResult<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val validLikesCount = maxOf(0, newLikesCount) // Ensure non-negative
+                artworksRef.child(artworkId).child("likesCount").setValue(validLikesCount).await()
+                NetworkResult.Success(true)
 
-        return when (val result = getAllPublicArtworks()) {
-            is NetworkResult.Success -> {
-                val filteredArtworks = result.data?.filter { artwork ->
-                    artwork.tags.any { artworkTag ->
-                        artworkTag.equals(tag, ignoreCase = true)
-                    }
-                } ?: emptyList()
-                NetworkResult.Success(filteredArtworks)
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to update likes: ${e.message}")
             }
-            is NetworkResult.Error -> NetworkResult.Error("Failed to get artworks by tag: ${result.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
         }
     }
 
-    // ✅ Get recent artworks (last 7 days)
-    suspend fun getRecentArtworks(limit: Int = 10): NetworkResult<List<ArtworkModel>> {
-        return when (val result = getAllPublicArtworks()) {
-            is NetworkResult.Success -> {
-                val sevenDaysAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000)
-                val recentArtworks = result.data?.filter { artwork ->
-                    artwork.uploadedAt >= sevenDaysAgo
-                }?.take(limit) ?: emptyList()
+    // ✅ Increment view count
+    override suspend fun incrementViewCount(artworkId: String): NetworkResult<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val snapshot = artworksRef.child(artworkId).child("viewsCount").get().await()
+                val currentViews = (snapshot.value as? Long)?.toInt() ?: 0
+                val newViewsCount = currentViews + 1
 
-                NetworkResult.Success(recentArtworks)
+                artworksRef.child(artworkId).child("viewsCount").setValue(newViewsCount).await()
+                NetworkResult.Success(true)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to increment view count: ${e.message}")
             }
-            is NetworkResult.Error -> NetworkResult.Error("Failed to get recent artworks: ${result.message}")
-            is NetworkResult.Loading -> NetworkResult.Loading()
         }
     }
 
-    // ✅ PRIVATE: Enrich artwork with complete user data
-    private suspend fun enrichArtworkWithUserData(artwork: ArtworkModel): ArtworkModel {
-        return try {
-            // Skip if already has complete data
-            if (artwork.artistUsername.isNotEmpty() && artwork.thumbnailUrl.isNotEmpty()) {
-                return artwork
-            }
+    // ✅ Get single artwork by ID
+    override suspend fun getArtworkById(artworkId: String): NetworkResult<ArtworkData> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val snapshot = artworksRef.child(artworkId).get().await()
 
-            // Fetch artist information
-            val artistUsername = if (artwork.artistUsername.isEmpty()) {
-                when (val userResult = userRepository.getUserById(artwork.artistId)) {
-                    is NetworkResult.Success -> userResult.data?.displayName ?: "Unknown Artist"
-                    else -> "Unknown Artist"
+                if (!snapshot.exists()) {
+                    return@withContext NetworkResult.Error("Artwork not found")
                 }
-            } else {
-                artwork.artistUsername
-            }
 
-            // Generate thumbnail URL if needed
-            val thumbnailUrl = if (artwork.thumbnailUrl.isEmpty() && artwork.imageUrl.isNotEmpty()) {
-                try {
-                    cloudinaryRepository.getThumbnailUrl(artwork.imageUrl)
-                } catch (e: Exception) {
-                    artwork.imageUrl // Fallback to original image
-                }
-            } else {
-                artwork.thumbnailUrl
-            }
+                val artworkModel = snapshot.getValue(ArtworkModel::class.java)
+                    ?: return@withContext NetworkResult.Error("Invalid artwork data")
 
-            // Return enriched artwork
-            artwork.copy(
-                artistUsername = artistUsername,
-                thumbnailUrl = thumbnailUrl
-            )
+                val artworkData = artworkModel.toArtworkData()
+                NetworkResult.Success(artworkData)
+
+            } catch (e: Exception) {
+                NetworkResult.Error("Failed to get artwork: ${e.message}")
+            }
+        }
+    }
+
+    // ✅ Helper function to update user artwork count
+    private suspend fun updateUserArtworkCount(userId: String, increment: Int) {
+        try {
+            val userRef = usersRef.child(userId)
+            val snapshot = userRef.child("artworkCount").get().await()
+            val currentCount = (snapshot.value as? Long)?.toInt() ?: 0
+            val newCount = maxOf(0, currentCount + increment) // Ensure non-negative
+            userRef.child("artworkCount").setValue(newCount).await()
         } catch (e: Exception) {
-            // Return original artwork if enrichment fails
-            artwork
-        }
-    }
-
-    // ✅ CRITICAL FIX: Batch update artworks with proper null safety
-    suspend fun batchUpdateArtworks(artworks: List<ArtworkModel>): NetworkResult<List<ArtworkModel>> {
-        val updatedArtworks = mutableListOf<ArtworkModel>()
-        val errors = mutableListOf<String>()
-
-        artworks.forEach { artwork ->
-            when (val result = updateArtwork(artwork)) {
-                is NetworkResult.Success -> {
-                    // ✅ FIXED: Properly handle nullable data
-                    result.data?.let { updatedArtwork ->
-                        updatedArtworks.add(updatedArtwork)
-                    } ?: run {
-                        errors.add("Updated artwork ${artwork.id} returned null data")
-                    }
-                }
-                is NetworkResult.Error -> {
-                    errors.add("Failed to update ${artwork.id}: ${result.message}")
-                }
-                is NetworkResult.Loading -> {
-                    errors.add("Update operation for ${artwork.id} is still in progress")
-                }
-            }
-        }
-
-        return if (errors.isEmpty()) {
-            NetworkResult.Success(updatedArtworks)
-        } else {
-            NetworkResult.Error("Batch update completed with errors: ${errors.joinToString(", ")}")
+            println("Failed to update user artwork count: ${e.message}")
+            // Don't throw exception here to avoid failing the main operation
         }
     }
 }
+
+// ✅ FIXED: Extension function to convert ArtworkModel to ArtworkData
+private fun ArtworkModel.toArtworkData(): ArtworkData {
+    return ArtworkData(
+        id = this.id,
+        title = this.title,
+        description = this.description,
+        imageUrl = this.imageUrl.ifEmpty { this.thumbnailUrl }, // Use thumbnail as fallback
+
+
+        isPublic = this.isPublic,
+        likesCount = this.likesCount,
+
+
+        createdAt = this.uploadedAt,
+
+        userId = this.artistId
+    )
+}
+
