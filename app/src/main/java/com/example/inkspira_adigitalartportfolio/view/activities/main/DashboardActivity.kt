@@ -28,10 +28,14 @@ import com.example.inkspira_adigitalartportfolio.view.screens.DiscoverScreen
 import com.example.inkspira_adigitalartportfolio.view.screens.GalleryScreen
 import com.example.inkspira_adigitalartportfolio.view.screens.ProfileScreen
 import com.example.inkspira_adigitalartportfolio.view.screens.UploadScreen
+import com.example.inkspira_adigitalartportfolio.view.screens.EditArtworkScreen // ✅ ADD: Import EditArtworkScreen
+import com.example.inkspira_adigitalartportfolio.view.screens.ArtworkData // ✅ ADD: Import ArtworkData
 import com.example.inkspira_adigitalartportfolio.viewmodel.AuthViewModel
+import com.example.inkspira_adigitalartportfolio.viewmodel.GalleryViewModel // ✅ ADD: Import GalleryViewModel
 import com.example.inkspira_adigitalartportfolio.model.data.UserRole
 import com.example.inkspira_adigitalartportfolio.utils.NetworkResult
 import kotlinx.coroutines.flow.first
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 class DashboardActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels()
@@ -70,7 +74,7 @@ sealed class BottomNavItem(
     val title: String,
     val icon: ImageVector,
     val selectedIcon: ImageVector = icon,
-    val allowedRoles: List<UserRole> // ✅ NEW: Define which roles can access each item
+    val allowedRoles: List<UserRole>
 ) {
     object Gallery : BottomNavItem(
         route = "gallery",
@@ -100,7 +104,7 @@ sealed class BottomNavItem(
         title = "Profile",
         icon = Icons.Default.Person,
         selectedIcon = Icons.Filled.Person,
-        allowedRoles = listOf(UserRole.ARTIST, UserRole.VIEWER, UserRole.BOTH) // All users can access profile
+        allowedRoles = listOf(UserRole.ARTIST, UserRole.VIEWER, UserRole.BOTH)
     )
 }
 
@@ -118,6 +122,9 @@ private fun MainScreen(
     var userRole by remember { mutableStateOf<UserRole?>(null) }
     var isLoadingRole by remember { mutableStateOf(true) }
     var roleError by remember { mutableStateOf<String?>(null) }
+
+    // ✅ NEW: State for EditArtworkScreen navigation
+    var artworkToEdit by remember { mutableStateOf<ArtworkData?>(null) }
 
     // ✅ NEW: Fetch user role when component loads
     LaunchedEffect(Unit) {
@@ -235,6 +242,21 @@ private fun MainScreen(
         return
     }
 
+    // ✅ NEW: Show EditArtworkScreen if artwork is selected for editing
+    artworkToEdit?.let { artwork ->
+        EditArtworkScreen(
+            artwork = artwork,
+            onNavigateBack = {
+                artworkToEdit = null
+            },
+            onEditSuccess = {
+                artworkToEdit = null
+                // Optionally refresh gallery data here
+            }
+        )
+        return // Don't show the main scaffold when editing
+    }
+
     Scaffold(
         bottomBar = {
             // Only show bottom navigation on main screens and if user has allowed items
@@ -263,6 +285,9 @@ private fun MainScreen(
                             if (userRole == UserRole.ARTIST || userRole == UserRole.BOTH) {
                                 navController.navigate(BottomNavItem.Upload.route)
                             }
+                        },
+                        onNavigateToEdit = { artwork -> // ✅ FIXED: Added missing parameter
+                            artworkToEdit = artwork
                         }
                     )
                 }

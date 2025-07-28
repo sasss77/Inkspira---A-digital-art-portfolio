@@ -8,7 +8,7 @@ data class ArtworkModel(
     val thumbnailUrl: String = "",
     val artistId: String = "",
     val artistUsername: String = "",
-
+    val viewsCount: Int = 0,
     val isPublic: Boolean = true,
     val uploadedAt: Long = 0L,
 

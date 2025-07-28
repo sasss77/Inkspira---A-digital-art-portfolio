@@ -17,7 +17,7 @@ class ArtworkViewModel : ViewModel() {
     private val artworksRef = database.getReference("artworks")
     private val usersRef = database.getReference("users")
 
-    // ✅ FIXED: Proper generic type declarations
+    // ✅ UPDATED: UI State with update functionality
     private val _uiState = MutableStateFlow(ArtworkUiState())
     val uiState: StateFlow<ArtworkUiState> = _uiState.asStateFlow()
 
@@ -376,6 +376,77 @@ class ArtworkViewModel : ViewModel() {
         }
     }
 
+    // ✅ NEW: Update Artwork Function
+    fun updateArtwork(
+        artworkId: String,
+        title: String,
+        description: String,
+        category: String,
+        isPublic: Boolean
+    ) {
+        viewModelScope.launch {
+            println("🔄 ArtworkViewModel: Starting updateArtwork for ID: $artworkId")
+            _uiState.value = _uiState.value.copy(isUpdatingArtwork = true)
+
+            try {
+                val userId = firebaseAuth.currentUser?.uid
+                if (userId == null) {
+                    _uiState.value = _uiState.value.copy(
+                        isUpdatingArtwork = false,
+                        errorMessage = "User not authenticated"
+                    )
+                    return@launch
+                }
+
+                // Verify artwork ownership
+                val artworkSnapshot = artworksRef.child(artworkId).get().await()
+                val existingArtwork = artworkSnapshot.getValue(ArtworkModel::class.java)
+
+                if (existingArtwork?.artistId != userId) {
+                    _uiState.value = _uiState.value.copy(
+                        isUpdatingArtwork = false,
+                        errorMessage = "Unauthorized: Cannot edit this artwork"
+                    )
+                    return@launch
+                }
+
+                println("✅ ArtworkViewModel: Ownership verified, updating artwork...")
+
+                // Prepare update data
+                val updates = mapOf(
+                    "title" to title.trim(),
+                    "description" to description.trim(),
+                    "category" to category.trim(),
+                    "isPublic" to isPublic,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+
+                // Update in Firebase
+                artworksRef.child(artworkId).updateChildren(updates).await()
+
+                println("✅ ArtworkViewModel: Firebase update successful")
+
+                // Update local state in all relevant lists
+                updateLocalArtworkData(artworkId, title.trim(), description.trim(), category.trim(), isPublic)
+
+                _uiState.value = _uiState.value.copy(
+                    isUpdatingArtwork = false,
+                    successMessage = "Artwork updated successfully!",
+                    errorMessage = null
+                )
+
+                println("✅ ArtworkViewModel: Update completed successfully")
+
+            } catch (e: Exception) {
+                println("❌ ArtworkViewModel: Update failed: ${e.message}")
+                _uiState.value = _uiState.value.copy(
+                    isUpdatingArtwork = false,
+                    errorMessage = "Failed to update artwork: ${e.message}"
+                )
+            }
+        }
+    }
+
     fun deleteArtwork(artworkId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isDeleting = true)
@@ -482,6 +553,79 @@ class ArtworkViewModel : ViewModel() {
         }
     }
 
+    // ✅ NEW: Helper function to update local artwork data after edit
+    private fun updateLocalArtworkData(
+        artworkId: String,
+        title: String,
+        description: String,
+        category: String,
+        isPublic: Boolean
+    ) {
+        val updatedAt = System.currentTimeMillis()
+
+        println("🔄 ArtworkViewModel: Updating local artwork data for ID: $artworkId")
+
+        // Update user artworks
+        _userArtworks.value = _userArtworks.value.map { artwork ->
+            if (artwork.id == artworkId) {
+                println("✅ ArtworkViewModel: Updated artwork in userArtworks: $title")
+                artwork.copy(
+                    title = title,
+                    description = description,
+                    category = category,
+                    isPublic = isPublic,
+                    updatedAt = updatedAt
+                )
+            } else artwork
+        }
+
+        // Update public artworks (only if it's public)
+        _publicArtworks.value = _publicArtworks.value.map { artwork ->
+            if (artwork.id == artworkId) {
+                if (isPublic) {
+                    artwork.copy(
+                        title = title,
+                        description = description,
+                        category = category,
+                        isPublic = isPublic,
+                        updatedAt = updatedAt
+                    )
+                } else {
+                    // Remove from public list if made private
+                    return@map null
+                }
+            } else artwork
+        }.filterNotNull()
+
+        // Update search results
+        _searchResults.value = _searchResults.value.map { artwork ->
+            if (artwork.id == artworkId) {
+                artwork.copy(
+                    title = title,
+                    description = description,
+                    category = category,
+                    isPublic = isPublic,
+                    updatedAt = updatedAt
+                )
+            } else artwork
+        }
+
+        // Update trending artworks
+        _trendingArtworks.value = _trendingArtworks.value.map { artwork ->
+            if (artwork.id == artworkId) {
+                artwork.copy(
+                    title = title,
+                    description = description,
+                    category = category,
+                    isPublic = isPublic,
+                    updatedAt = updatedAt
+                )
+            } else artwork
+        }
+
+        println("✅ ArtworkViewModel: Local data update completed")
+    }
+
     private suspend fun updateUserArtworkCount(userId: String, increment: Int) {
         try {
             val userRef = usersRef.child(userId)
@@ -494,19 +638,19 @@ class ArtworkViewModel : ViewModel() {
         }
     }
 
-    // ✅ FIXED: Extension function matching your ArtworkModel
+    // ✅ UPDATED: Extension function with proper field mapping
     private fun ArtworkModel.toArtworkData(): ArtworkData {
         return ArtworkData(
             id = this.id,
             title = this.title,
             description = this.description,
             imageUrl = this.getDisplayThumbnail(),
-            category = "Art", // Default category since no category field
 
+            tags = emptyList(), // Keep empty as requested
             isPublic = this.isPublic,
             likesCount = this.likesCount,
-            viewsCount = 0, // Default to 0 since viewsCount removed from model
-
+            viewsCount = this.viewsCount, // ✅ FIXED: Use actual viewsCount
+            commentsCount = this.commentsCount, // ✅ FIXED: Use actual commentsCount
             createdAt = this.uploadedAt,
 
             userId = this.artistId
@@ -514,7 +658,7 @@ class ArtworkViewModel : ViewModel() {
     }
 }
 
-// ✅ UI State data class
+// ✅ UPDATED: Complete UI State data class with update functionality
 data class ArtworkUiState(
     val isLoadingUserArtworks: Boolean = false,
     val isLoadingPublicArtworks: Boolean = false,
@@ -522,9 +666,11 @@ data class ArtworkUiState(
     val isSearching: Boolean = false,
     val isSearchMode: Boolean = false,
     val isDeleting: Boolean = false,
+    val isUpdatingArtwork: Boolean = false,  // ✅ NEW: For update operations
     val errorMessage: String? = null,
     val successMessage: String? = null
 ) {
     val isLoading: Boolean
-        get() = isLoadingUserArtworks || isLoadingPublicArtworks || isLoadingTrending || isSearching || isDeleting
+        get() = isLoadingUserArtworks || isLoadingPublicArtworks || isLoadingTrending ||
+                isSearching || isDeleting || isUpdatingArtwork
 }

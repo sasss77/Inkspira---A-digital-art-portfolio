@@ -34,7 +34,7 @@ data class ArtworkData(
     val description: String = "",
     val imageUrl: String = "",
     val category: String = "",
-    val tags: List<String> = emptyList(), // ✅ FIXED: Proper generic type
+    val tags: List<String> = emptyList(),
     val isPublic: Boolean = true,
     val likesCount: Int = 0,
     val viewsCount: Int = 0,
@@ -67,7 +67,8 @@ enum class SortOption(val displayName: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryScreen(
-    onNavigateToUpload: () -> Unit, // ✅ FIXED: Proper arrow syntax
+    onNavigateToUpload: () -> Unit,
+    onNavigateToEdit: (ArtworkData) -> Unit, // ✅ NEW: Navigation to EditArtworkScreen
     galleryViewModel: GalleryViewModel = viewModel()
 ) {
     // ✅ FIXED: Use ViewModel state instead of local state
@@ -77,7 +78,7 @@ fun GalleryScreen(
     val errorMessage by galleryViewModel.errorMessage.collectAsState()
 
     var showSortDialog by remember { mutableStateOf(false) }
-    var selectedArtwork by remember { mutableStateOf<ArtworkData?>(null) } // ✅ FIXED: Proper nullable type
+    var selectedArtwork by remember { mutableStateOf<ArtworkData?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // ✅ CRITICAL: Load artworks on screen initialization
@@ -88,7 +89,7 @@ fun GalleryScreen(
 
     // ✅ Handle error messages
     LaunchedEffect(errorMessage) {
-        errorMessage?.let { message -> // ✅ FIXED: Proper arrow syntax
+        errorMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             galleryViewModel.clearErrorMessage()
         }
@@ -152,7 +153,7 @@ fun GalleryScreen(
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
-                snackbar = { data -> // ✅ FIXED: Proper arrow syntax
+                snackbar = { data ->
                     Snackbar(
                         snackbarData = data,
                         containerColor = ErrorColor,
@@ -162,7 +163,7 @@ fun GalleryScreen(
                 }
             )
         }
-    ) { paddingValues -> // ✅ FIXED: Proper arrow syntax
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -174,18 +175,18 @@ fun GalleryScreen(
                 .padding(paddingValues)
         ) {
             when {
-                isLoading && artworks.isEmpty() -> { // ✅ FIXED: HTML entity
+                isLoading && artworks.isEmpty() -> {
                     LoadingContent()
                 }
 
-                artworks.isEmpty() && !isLoading -> { // ✅ FIXED: HTML entity
+                artworks.isEmpty() && !isLoading -> {
                     EmptyGalleryContent(onNavigateToUpload = onNavigateToUpload)
                 }
 
-                else -> { // ✅ FIXED: Proper arrow syntax
+                else -> {
                     GalleryContent(
                         artworks = artworks,
-                        onArtworkClick = { artwork -> selectedArtwork = artwork } // ✅ FIXED: Proper arrow syntax
+                        onArtworkClick = { artwork -> selectedArtwork = artwork }
                     )
                 }
             }
@@ -195,20 +196,23 @@ fun GalleryScreen(
         if (showSortDialog) {
             SimpleSortDialog(
                 onDismiss = { showSortDialog = false },
-                onSortSelected = { sortOption -> // ✅ FIXED: Proper arrow syntax
+                onSortSelected = { sortOption ->
                     galleryViewModel.sortArtworks(sortOption)
                     showSortDialog = false
                 }
             )
         }
 
-        // ✅ Artwork Detail Dialog
-        selectedArtwork?.let { artwork -> // ✅ FIXED: Proper arrow syntax
+        // ✅ UPDATED: Artwork Detail Dialog with Edit navigation
+        selectedArtwork?.let { artwork ->
             SimpleArtworkDialog(
                 artwork = artwork,
                 onDismiss = { selectedArtwork = null },
-                onEdit = { selectedArtwork = null },
-                onDelete = { artworkId -> // ✅ FIXED: Proper arrow syntax
+                onEdit = { artworkToEdit ->
+                    selectedArtwork = null // Close dialog first
+                    onNavigateToEdit(artworkToEdit) // Navigate to EditArtworkScreen
+                },
+                onDelete = { artworkId ->
                     galleryViewModel.deleteArtwork(artworkId)
                     selectedArtwork = null
                 }
@@ -219,8 +223,8 @@ fun GalleryScreen(
 
 @Composable
 private fun GalleryContent(
-    artworks: List<ArtworkData>, // ✅ FIXED: Proper generic type
-    onArtworkClick: (ArtworkData) -> Unit // ✅ FIXED: Proper arrow syntax
+    artworks: List<ArtworkData>,
+    onArtworkClick: (ArtworkData) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -286,7 +290,7 @@ private fun GalleryContent(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(artworks) { artwork -> // ✅ FIXED: Proper arrow syntax
+            items(artworks) { artwork ->
                 ArtworkCard(
                     artwork = artwork,
                     onClick = { onArtworkClick(artwork) }
@@ -296,13 +300,10 @@ private fun GalleryContent(
     }
 }
 
-// ✅ Rest of your existing Composable functions remain the same...
-// (ArtworkCard, LoadingContent, EmptyGalleryContent, etc.)
-
 @Composable
 private fun ArtworkCard(
     artwork: ArtworkData,
-    onClick: () -> Unit // ✅ FIXED: Proper arrow syntax
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -486,7 +487,7 @@ private fun LoadingContent() {
 }
 
 @Composable
-private fun EmptyGalleryContent(onNavigateToUpload: () -> Unit) { // ✅ FIXED: Proper arrow syntax
+private fun EmptyGalleryContent(onNavigateToUpload: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -567,8 +568,8 @@ private fun EmptyGalleryContent(onNavigateToUpload: () -> Unit) { // ✅ FIXED: 
 // ✅ Simple Sort Dialog
 @Composable
 private fun SimpleSortDialog(
-    onDismiss: () -> Unit, // ✅ FIXED: Proper arrow syntax
-    onSortSelected: (SortOption) -> Unit // ✅ FIXED: Proper arrow syntax
+    onDismiss: () -> Unit,
+    onSortSelected: (SortOption) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -581,7 +582,7 @@ private fun SimpleSortDialog(
         },
         text = {
             Column {
-                SortOption.values().forEach { option -> // ✅ FIXED: Proper arrow syntax
+                SortOption.values().forEach { option ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -591,10 +592,10 @@ private fun SimpleSortDialog(
                     ) {
                         Icon(
                             imageVector = when (option) {
-                                SortOption.NEWEST, SortOption.OLDEST -> Icons.Default.Schedule // ✅ FIXED: HTML entity
-                                SortOption.MOST_LIKED -> Icons.Default.Favorite // ✅ FIXED: HTML entity
-                                SortOption.MOST_VIEWED -> Icons.Default.Visibility // ✅ FIXED: HTML entity
-                                SortOption.TITLE_AZ -> Icons.Default.SortByAlpha // ✅ FIXED: HTML entity
+                                SortOption.NEWEST, SortOption.OLDEST -> Icons.Default.Schedule
+                                SortOption.MOST_LIKED -> Icons.Default.Favorite
+                                SortOption.MOST_VIEWED -> Icons.Default.Visibility
+                                SortOption.TITLE_AZ -> Icons.Default.SortByAlpha
                             },
                             contentDescription = null,
                             tint = InkspiraPrimary,
@@ -623,24 +624,38 @@ private fun SimpleSortDialog(
     )
 }
 
-// ✅ FIXED: Simple Artwork Dialog with real image display
+// ✅ UPDATED: Simple Artwork Dialog with Edit navigation functionality
 @Composable
 private fun SimpleArtworkDialog(
     artwork: ArtworkData,
-    onDismiss: () -> Unit, // ✅ FIXED: Proper arrow syntax
-    onEdit: () -> Unit, // ✅ FIXED: Proper arrow syntax
-    onDelete: (String) -> Unit // ✅ FIXED: Proper arrow syntax
+    onDismiss: () -> Unit,
+    onEdit: (ArtworkData) -> Unit, // ✅ FIXED: Pass artwork data to edit callback
+    onDelete: (String) -> Unit
 ) {
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = artwork.title,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = InkspiraPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Text(
+                    text = artwork.title,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+            }
         },
         text = {
             Column {
@@ -685,12 +700,83 @@ private fun SimpleArtworkDialog(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // Upload date
-                Text(
-                    text = "Created: ${artwork.getFormattedCreatedDate()}",
-                    fontSize = 12.sp,
-                    color = TextMuted
-                )
+                // Artwork details
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = DeepDarkBlue.copy(alpha = 0.3f)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Created:",
+                                fontSize = 12.sp,
+                                color = TextMuted
+                            )
+                            Text(
+                                text = artwork.getFormattedCreatedDate(),
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        if (artwork.category.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Category:",
+                                    fontSize = 12.sp,
+                                    color = TextMuted
+                                )
+                                Text(
+                                    text = artwork.category,
+                                    fontSize = 12.sp,
+                                    color = InkspiraPrimary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Privacy:",
+                                fontSize = 12.sp,
+                                color = TextMuted
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (artwork.isPublic) Icons.Default.Public else Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = if (artwork.isPublic) InkspiraPrimary else TextMuted,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (artwork.isPublic) "Public" else "Private",
+                                    fontSize = 12.sp,
+                                    color = if (artwork.isPublic) InkspiraPrimary else TextMuted,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -741,19 +827,19 @@ private fun SimpleArtworkDialog(
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = if (artwork.isPublic) Icons.Default.Public else Icons.Default.Lock,
-                            contentDescription = "Privacy",
+                            imageVector = Icons.Default.Comment,
+                            contentDescription = "Comments",
                             tint = InkspiraPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = if (artwork.isPublic) "Public" else "Private",
-                            fontSize = 14.sp,
+                            text = artwork.commentsCount.toString(),
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Privacy",
+                            text = "Comments",
                             fontSize = 12.sp,
                             color = TextSecondary
                         )
@@ -765,29 +851,89 @@ private fun SimpleArtworkDialog(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TextButton(onClick = onEdit) {
-                    Text("Edit", color = InkspiraPrimary)
+                // ✅ UPDATED: Edit button with proper navigation
+                Button(
+                    onClick = { onEdit(artwork) }, // Pass the artwork data
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = InkspiraPrimary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Edit",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-                TextButton(onClick = { showDeleteConfirmation = true }) {
-                    Text("Delete", color = ErrorColor)
+
+                // Delete button
+                Button(
+                    onClick = { showDeleteConfirmation = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ErrorColor
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Delete",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = TextSecondary)
+                Text(
+                    text = "Close",
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Medium
+                )
             }
         },
         containerColor = DarkNavy,
         shape = RoundedCornerShape(16.dp)
     )
 
-    // Delete confirmation
+    // Delete confirmation dialog
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
-            title = { Text("Delete Artwork", fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to delete \"${artwork.title}\"? This action cannot be undone.") },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = ErrorColor,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Delete Artwork",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete \"${artwork.title}\"? This action cannot be undone.",
+                    fontSize = 14.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -796,15 +942,26 @@ private fun SimpleArtworkDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ErrorColor)
                 ) {
-                    Text("Delete", color = Color.White)
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Delete", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmation = false }) {
-                    Text("Cancel", color = InkspiraPrimary)
+                    Text(
+                        text = "Cancel",
+                        color = InkspiraPrimary,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             },
-            containerColor = DarkNavy
+            containerColor = DarkNavy,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 }
