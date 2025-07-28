@@ -1122,27 +1122,27 @@ private fun ArtistProfileDialog(
         },
         confirmButton = {
             Button(
-                onClick = onFollow,
+                onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = InkspiraPrimary
                 )
             ) {
-                Icon(
-                    imageVector = Icons.Default.PersonAdd,
-                    contentDescription = "Follow",
-                    modifier = Modifier.size(18.dp)
-                )
+//                Icon(
+//                    imageVector = Icons.Default.PersonAdd,
+//                    contentDescription = "Follow",
+//                    modifier = Modifier.size(18.dp)
+//                )
 
-                Spacer(modifier = Modifier.width(4.dp))
+//                Spacer(modifier = Modifier.width(4.dp))
 
-                Text("Follow", color = Color.White)
+                Text("Close", color = Color.White)
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close", color = TextSecondary)
-            }
-        },
+//        dismissButton = {
+//            TextButton(onClick = onDismiss) {
+//                Text("Close", color = TextSecondary)
+//            }
+//        },
         containerColor = DarkNavy,
         shape = RoundedCornerShape(16.dp)
     )

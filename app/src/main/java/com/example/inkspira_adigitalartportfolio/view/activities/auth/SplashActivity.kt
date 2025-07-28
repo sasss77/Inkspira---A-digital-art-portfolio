@@ -40,10 +40,7 @@ import com.example.inkspira_adigitalartportfolio.R
 import com.example.inkspira_adigitalartportfolio.view.activities.main.DashboardActivity
 
 import com.example.inkspira_adigitalartportfolio.view.activities.main.OnboardingActivity
-import com.example.inkspira_adigitalartportfolio.view.ui.theme.InkspiraDarkTheme
-import com.example.inkspira_adigitalartportfolio.view.ui.theme.InkspiraPrimary
-import com.example.inkspira_adigitalartportfolio.view.ui.theme.InkspiraSecondary
-import com.example.inkspira_adigitalartportfolio.view.ui.theme.InkspiraTertiary
+import com.example.inkspira_adigitalartportfolio.view.ui.theme.*
 import com.example.inkspira_adigitalartportfolio.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
