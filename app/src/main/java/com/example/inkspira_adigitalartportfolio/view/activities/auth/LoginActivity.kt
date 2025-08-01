@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -189,7 +190,8 @@ private fun LoginScreen(
                                 emailError = null
                             },
                             label = { Text("Email") },
-                            placeholder = { Text("Enter your email") },
+                            placeholder = { Text("Enter your email")
+                                          },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Email,
@@ -201,7 +203,7 @@ private fun LoginScreen(
                             singleLine = true,
                             isError = emailError != null,
                             supportingText = emailError?.let { { Text(it, color = ErrorColor) } },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("email"),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = InkspiraPrimary,
                                 focusedLabelColor = InkspiraPrimary
@@ -241,7 +243,7 @@ private fun LoginScreen(
                             singleLine = true,
                             isError = passwordError != null,
                             supportingText = passwordError?.let { { Text(it, color = ErrorColor) } },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("password"),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = InkspiraPrimary,
                                 focusedLabelColor = InkspiraPrimary
@@ -278,7 +280,7 @@ private fun LoginScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp),
+                                .height(56.dp).testTag("submit"),
                             // ✅ FIXED: Use isLoading from ViewModel
                             enabled = !isLoading,
                             colors = ButtonDefaults.buttonColors(

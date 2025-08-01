@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -238,7 +239,7 @@ private fun RegisterScreen(
                             singleLine = true,
                             isError = displayNameError != null,
                             supportingText = displayNameError?.let { { Text(it, color = ErrorColor) } },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("fullName"),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = InkspiraPrimary,
                                 focusedLabelColor = InkspiraPrimary
@@ -265,7 +266,7 @@ private fun RegisterScreen(
                             singleLine = true,
                             isError = usernameError != null,
                             supportingText = usernameError?.let { { Text(it, color = ErrorColor) } },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("username"),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = InkspiraPrimary,
                                 focusedLabelColor = InkspiraPrimary
@@ -292,7 +293,7 @@ private fun RegisterScreen(
                             singleLine = true,
                             isError = emailError != null,
                             supportingText = emailError?.let { { Text(it, color = ErrorColor) } },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("email"),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = InkspiraPrimary,
                                 focusedLabelColor = InkspiraPrimary
@@ -332,7 +333,7 @@ private fun RegisterScreen(
                             singleLine = true,
                             isError = passwordError != null,
                             supportingText = passwordError?.let { { Text(it, color = ErrorColor) } },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("password"),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = InkspiraPrimary,
                                 focusedLabelColor = InkspiraPrimary
@@ -372,7 +373,7 @@ private fun RegisterScreen(
                             singleLine = true,
                             isError = confirmPasswordError != null,
                             supportingText = confirmPasswordError?.let { { Text(it, color = ErrorColor) } },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag("confirmPassword"),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = InkspiraPrimary,
                                 focusedLabelColor = InkspiraPrimary
@@ -543,7 +544,7 @@ private fun RegisterScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .height(56.dp).testTag("register"),
                     // ✅ FIXED: Use isLoading from ViewModel
                     enabled = !isLoading,
                     colors = ButtonDefaults.buttonColors(

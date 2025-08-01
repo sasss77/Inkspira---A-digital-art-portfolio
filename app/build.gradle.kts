@@ -98,5 +98,37 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.x.x")
 
 
+    testImplementation("org.mockito:mockito-core:5.6.0")
+    testImplementation ("junit:junit:4.13.2")
+    testImplementation ("org.mockito:mockito-core:5.1.1")
+    testImplementation ("org.mockito.kotlin:mockito-kotlin:4.1.0")
+    testImplementation ("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation ("org.jetbrains.kotlin:kotlin-test:1.8.10")
+
+    // For Android unit tests
+    testImplementation ("androidx.arch.core:core-testing:2.2.0")
+
+    // Additional required dependencies
+    testImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("org.jetbrains.kotlin:kotlin-test:1.8.10")
+
+    // For mocking Firebase Tasks
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    // AndroidX Test framework (required for Espresso)
+    androidTestImplementation("androidx.test:runner:1.6.1")
+    androidTestImplementation("androidx.test:rules:1.6.1")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    // For coroutines testing in instrumented tests
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
+    // Mockito for Android instrumented tests
+    androidTestImplementation("org.mockito:mockito-android:5.6.0")
+    androidTestImplementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
+
+
+
 
 }
